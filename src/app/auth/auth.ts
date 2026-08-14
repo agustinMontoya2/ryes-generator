@@ -1,13 +1,14 @@
 import type { LoginResponse, User } from '../types';
+import { BRAND_SLUG } from '../config/brand';
 
-const TOKEN_KEY = 'ryes_token';
-const USER_KEY = 'ryes_user';
+const TOKEN_KEY = `${BRAND_SLUG}_token`;
+const USER_KEY = `${BRAND_SLUG}_user`;
 
-export const DEMO_EMAIL = 'operador@ryes.com';
-export const DEMO_PASSWORD = 'ryes2026';
+export const DEMO_EMAIL = `operador@${BRAND_SLUG}.com`;
+export const DEMO_PASSWORD = `${BRAND_SLUG}2026`;
 
 const DEMO_USER: User = {
-  id: 'u-ryes-1',
+  id: `u-${BRAND_SLUG}-1`,
   email: DEMO_EMAIL,
 };
 

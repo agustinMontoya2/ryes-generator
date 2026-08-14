@@ -11,7 +11,13 @@ import type {
   ServiceInput,
   JobReport,
 } from '../types';
-import { mockOrders, mockPatients, mockDentists, mockServices, mockRyes } from '../data/mockData';
+import {
+  mockOrders,
+  mockPatients,
+  mockDentists,
+  mockServices,
+  mockBranches,
+} from '../data/mockData';
 import { useCollection } from '../utils/useCollection';
 import { sumOrders } from '../utils/orders';
 import { OrderList } from '../components/OrderList';
@@ -83,9 +89,9 @@ const deleteMessages: Record<DeleteTarget['type'], { title: string; description:
   },
 };
 
-export function RyesDashboard() {
+export function BranchDashboard() {
   const { id } = useParams<{ id: string }>();
-  const ryes = mockRyes.find((r) => r.id === id);
+  const branch = mockBranches.find((r) => r.id === id);
 
   const orders = useCollection<Order>(mockOrders);
   const dentists = useCollection<Dentist>(mockDentists);
@@ -116,7 +122,7 @@ export function RyesDashboard() {
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  if (!ryes) {
+  if (!branch) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -293,10 +299,10 @@ export function RyesDashboard() {
           <Link to="/">
             <Button variant="ghost" size="sm" className="mb-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Ryes
+              Volver a sucursales
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold mb-1">{ryes.location}</h1>
+          <h1 className="text-2xl font-bold mb-1">{branch.location}</h1>
           <p className="text-gray-600">Gestión de Órdenes</p>
         </header>
 

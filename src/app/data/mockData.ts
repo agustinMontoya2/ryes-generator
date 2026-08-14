@@ -1,6 +1,6 @@
-import type { Patient, Dentist, Service, Order, Ryes } from '../types';
+import type { Patient, Dentist, Service, Order, Branch } from '../types';
 
-export const mockRyes: Ryes[] = [
+export const mockBranches: Branch[] = [
   { id: '1', location: 'Talar' },
   { id: '2', location: 'Moron' },
   { id: '3', location: 'Ballester' },

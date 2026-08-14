@@ -10,7 +10,7 @@ export interface LoginResponse {
   user: User;
 }
 
-export interface Ryes {
+export interface Branch {
   id: string;
   location: string;
 }
