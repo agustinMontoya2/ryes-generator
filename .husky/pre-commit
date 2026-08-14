@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+node scripts/validate-branch-name.cjs || exit 1
+
+npx lint-staged || exit 1
+npm run lint:check || exit 1
+npm run typecheck

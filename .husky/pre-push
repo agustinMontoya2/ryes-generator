@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+node scripts/validate-branch-name.cjs || exit 1

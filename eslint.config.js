@@ -30,4 +30,13 @@ export default tseslint.config(
       globals: globals.node,
     },
   },
+  {
+    files: ['scripts/**/*.cjs'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.commonjs },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 );
