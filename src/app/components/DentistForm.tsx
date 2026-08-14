@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Dentist } from '../types';
+import type { FormEvent } from 'react';
+import { toast } from 'sonner';
+import type { Dentist, DentistInput } from '../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Card } from './ui/card';
-import { X } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 
 interface DentistFormProps {
   dentist?: Dentist | null;
-  onSubmit: (dentist: Partial<Dentist>) => void;
+  onSubmit: (dentist: DentistInput) => void;
   onCancel: () => void;
 }
 
@@ -18,11 +19,11 @@ export function DentistForm({ dentist, onSubmit, onCancel }: DentistFormProps) {
     lastname: dentist?.lastname || '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim() || !formData.lastname.trim()) {
-      alert('Por favor complete todos los campos');
+      toast.error('Por favor complete todos los campos');
       return;
     }
 
@@ -33,52 +34,45 @@ export function DentistForm({ dentist, onSubmit, onCancel }: DentistFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md">
-        <div className="p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              {dentist ? 'Editar Odontólogo' : 'Nuevo Odontólogo'}
-            </h2>
-            <Button variant="ghost" size="sm" onClick={onCancel}>
-              <X className="w-5 h-5" />
-            </Button>
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{dentist ? 'Editar Odontólogo' : 'Nuevo Odontólogo'}</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nombre *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Ej: Roberto"
+              required
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ej: Roberto"
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastname">Apellido *</Label>
+            <Input
+              id="lastname"
+              value={formData.lastname}
+              onChange={(e) => setFormData((prev) => ({ ...prev, lastname: e.target.value }))}
+              placeholder="Ej: Sánchez"
+              required
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="lastname">Apellido *</Label>
-              <Input
-                id="lastname"
-                value={formData.lastname}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastname: e.target.value }))}
-                placeholder="Ej: Sánchez"
-                required
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-                Cancelar
-              </Button>
-              <Button type="submit" className="flex-1">
-                {dentist ? 'Guardar Cambios' : 'Agregar Odontólogo'}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Card>
-    </div>
+          <DialogFooter className="flex gap-3 pt-4 sm:justify-between">
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1">
+              {dentist ? 'Guardar Cambios' : 'Agregar Odontólogo'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,4 +1,4 @@
-import { Patient } from '../types';
+import type { Patient } from '../types';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit2, Trash2 } from 'lucide-react';
@@ -31,6 +31,7 @@ export function PatientList({ patients, onEdit, onDelete }: PatientListProps) {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label={`Editar paciente ${patient.fullname}`}
                 onClick={() => onEdit(patient)}
               >
                 <Edit2 className="w-4 h-4" />
@@ -38,6 +39,7 @@ export function PatientList({ patients, onEdit, onDelete }: PatientListProps) {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label={`Eliminar paciente ${patient.fullname}`}
                 onClick={() => onDelete(patient.id)}
               >
                 <Trash2 className="w-4 h-4 text-red-600" />

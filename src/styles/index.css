@@ -1,3 +1,24 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #remito-content,
+  #remito-content * {
+    visibility: visible;
+  }
+
+  #remito-content {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+}

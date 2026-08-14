@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Service } from '../types';
+import type { FormEvent } from 'react';
+import type { Service, ServiceInput } from '../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Card } from './ui/card';
-import { X } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 
 interface ServiceFormProps {
   service: Service | null;
-  onSubmit: (service: Partial<Service>) => void;
+  onSubmit: (service: ServiceInput) => void;
   onCancel: () => void;
 }
 
@@ -21,7 +21,7 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
     setPrice(service?.price?.toString() || '');
   }, [service]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSubmit({
       id: service?.id,
@@ -31,18 +31,13 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50">
-      <Card className="w-full max-w-md mx-4 mb-0 md:mb-4 rounded-t-xl md:rounded-xl max-h-[90vh] overflow-auto">
-        <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
-            {service ? 'Editar Servicio' : 'Nuevo Servicio'}
-          </h2>
-          <Button variant="ghost" size="icon" onClick={onCancel}>
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{service ? 'Editar Servicio' : 'Nuevo Servicio'}</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nombre del Servicio</Label>
             <Input
@@ -66,16 +61,16 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <DialogFooter className="flex gap-2 pt-4 sm:justify-between">
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
               Cancelar
             </Button>
             <Button type="submit" className="flex-1">
               {service ? 'Guardar' : 'Crear'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

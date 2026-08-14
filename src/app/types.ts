@@ -40,3 +40,8 @@ export interface JobReport {
   totalPrice: number;
   deliveryDate: string;
 }
+
+export type OrderInput = Omit<Order, 'id'> & { id?: string };
+export type PatientInput = Omit<Patient, 'id'> & { id?: string };
+export type DentistInput = Omit<Dentist, 'id'> & { id?: string };
+export type ServiceInput = Omit<Service, 'id'> & { id?: string };

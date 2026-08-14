@@ -1,4 +1,4 @@
-import { Dentist } from '../types';
+import type { Dentist } from '../types';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Pencil, Trash2, User } from 'lucide-react';
@@ -30,6 +30,7 @@ export function DentistList({ dentists, onEdit, onDelete }: DentistListProps) {
               <Button
                 variant="outline"
                 size="sm"
+                aria-label={`Editar odontólogo ${dentist.name} ${dentist.lastname}`}
                 onClick={() => onEdit(dentist)}
               >
                 <Pencil className="w-4 h-4" />
@@ -37,6 +38,7 @@ export function DentistList({ dentists, onEdit, onDelete }: DentistListProps) {
               <Button
                 variant="destructive"
                 size="sm"
+                aria-label={`Eliminar odontólogo ${dentist.name} ${dentist.lastname}`}
                 onClick={() => onDelete(dentist.id)}
               >
                 <Trash2 className="w-4 h-4" />

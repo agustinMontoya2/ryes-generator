@@ -1,37 +1,42 @@
-import { useState } from "react";
-import { useParams, Link } from "react-router";
-import {
+import { useState } from 'react';
+import { useParams, Link } from 'react-router';
+import type {
   Order,
+  OrderInput,
   Dentist,
+  DentistInput,
   Patient,
+  PatientInput,
   Service,
+  ServiceInput,
   JobReport,
-} from "../types";
+} from '../types';
+import { mockOrders, mockPatients, mockDentists, mockServices, mockRyes } from '../data/mockData';
+import { useCollection } from '../utils/useCollection';
+import { sumOrders } from '../utils/orders';
+import { OrderList } from '../components/OrderList';
+import { OrderForm } from '../components/OrderForm';
+import { DentistList } from '../components/DentistList';
+import { DentistForm } from '../components/DentistForm';
+import { PatientList } from '../components/PatientList';
+import { PatientForm } from '../components/PatientForm';
+import { ServiceList } from '../components/ServiceList';
+import { ServiceForm } from '../components/ServiceForm';
+import { JobReportList } from '../components/JobReportList';
+import { JobReportView } from '../components/JobReportView';
+import { JobReportDialog } from '../components/JobReportDialog';
+import { Button } from '../components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
-  mockOrders,
-  mockPatients,
-  mockDentists,
-  mockServices,
-  mockRyes,
-} from "../data/mockData";
-import { OrderList } from "../components/OrderList";
-import { OrderForm } from "../components/OrderForm";
-import { DentistList } from "../components/DentistList";
-import { DentistForm } from "../components/DentistForm";
-import { PatientList } from "../components/PatientList";
-import { PatientForm } from "../components/PatientForm";
-import { ServiceList } from "../components/ServiceList";
-import { ServiceForm } from "../components/ServiceForm";
-import { JobReportList } from "../components/JobReportList";
-import { JobReportView } from "../components/JobReportView";
-import { JobReportDialog } from "../components/JobReportDialog";
-import { Button } from "../components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 import {
   Plus,
   ClipboardList,
@@ -41,81 +46,91 @@ import {
   Briefcase,
   FileText,
   ArrowLeft,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from '../components/ui/select';
 
-type View =
-  | "orders"
-  | "dentists"
-  | "patients"
-  | "services"
-  | "reports";
+type View = 'orders' | 'dentists' | 'patients' | 'services' | 'reports';
+
+type DeleteTarget =
+  | { type: 'order'; id: string }
+  | { type: 'patient'; id: string }
+  | { type: 'dentist'; id: string }
+  | { type: 'service'; id: string };
+
+const deleteMessages: Record<DeleteTarget['type'], { title: string; description: string }> = {
+  order: {
+    title: 'Eliminar orden',
+    description: '¿Está seguro que desea eliminar esta orden? Esta acción no se puede deshacer.',
+  },
+  patient: {
+    title: 'Eliminar paciente',
+    description: '¿Está seguro que desea eliminar este paciente? Esta acción no se puede deshacer.',
+  },
+  dentist: {
+    title: 'Eliminar odontólogo',
+    description:
+      '¿Está seguro que desea eliminar este odontólogo? Esta acción no se puede deshacer.',
+  },
+  service: {
+    title: 'Eliminar servicio',
+    description: '¿Está seguro que desea eliminar este servicio? Esta acción no se puede deshacer.',
+  },
+};
 
 export function RyesDashboard() {
   const { id } = useParams<{ id: string }>();
   const ryes = mockRyes.find((r) => r.id === id);
 
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
-  const [dentists, setDentists] =
-    useState<Dentist[]>(mockDentists);
-  const [patients, setPatients] =
-    useState<Patient[]>(mockPatients);
-  const [services, setServices] =
-    useState<Service[]>(mockServices);
+  const orders = useCollection<Order>(mockOrders);
+  const dentists = useCollection<Dentist>(mockDentists);
+  const patients = useCollection<Patient>(mockPatients);
+  const services = useCollection<Service>(mockServices);
   const [reports, setReports] = useState<JobReport[]>([]);
 
-  const [view, setView] = useState<View>("orders");
-  const [filterStatus, setFilterStatus] =
-    useState<string>("all");
-  const [selectedOrders, setSelectedOrders] = useState<
-    string[]
-  >([]);
+  const [view, setView] = useState<View>('orders');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
   const [showOrderForm, setShowOrderForm] = useState(false);
-  const [editingOrder, setEditingOrder] =
-    useState<Order | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const [showDentistForm, setShowDentistForm] = useState(false);
-  const [editingDentist, setEditingDentist] =
-    useState<Dentist | null>(null);
+  const [editingDentist, setEditingDentist] = useState<Dentist | null>(null);
 
   const [showPatientForm, setShowPatientForm] = useState(false);
-  const [editingPatient, setEditingPatient] =
-    useState<Patient | null>(null);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
 
   const [showServiceForm, setShowServiceForm] = useState(false);
-  const [editingService, setEditingService] =
-    useState<Service | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
 
-  const [currentReport, setCurrentReport] =
-    useState<JobReport | null>(null);
+  const [currentReport, setCurrentReport] = useState<JobReport | null>(null);
 
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportOrders, setReportOrders] = useState<Order[]>([]);
 
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
   if (!ryes) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">
-            Laboratorio no encontrado
-          </h2>
+          <h2 className="text-xl font-semibold mb-2">Laboratorio no encontrado</h2>
           <Link to="/">
             <Button>Volver al listado</Button>
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
-  const filteredOrders = orders.filter((order) => {
-    if (filterStatus === "all") return true;
+  const filteredOrders = orders.items.filter((order) => {
+    if (filterStatus === 'all') return true;
     return order.status === filterStatus;
   });
 
@@ -129,98 +144,48 @@ export function RyesDashboard() {
     setShowOrderForm(true);
   };
 
-  const handleSubmitOrder = (orderData: Partial<Order>) => {
+  const handleSubmitOrder = (orderData: OrderInput) => {
     if (orderData.id) {
-      setOrders(
-        orders.map((o) =>
-          o.id === orderData.id
-            ? ({ ...o, ...orderData } as Order)
-            : o,
-        ),
-      );
+      orders.update(orderData.id, orderData);
     } else {
-      const newOrder: Order = {
-        ...orderData,
-        id: String(orders.length + 1),
-        status: "pending",
-      } as Order;
-      setOrders([newOrder, ...orders]);
+      orders.add({ ...orderData, status: 'pending' }, true);
     }
     setShowOrderForm(false);
     setEditingOrder(null);
   };
 
-  const handleAddPatient = (patientData: Partial<Patient>): Patient => {
-    const newPatient: Patient = {
-      ...patientData,
-      id: String(patients.length + 1),
-    } as Patient;
-    setPatients([...patients, newPatient]);
-    return newPatient;
-  };
+  const handleAddPatient = (patientData: PatientInput): Patient => patients.add(patientData);
 
-  const handleDeleteOrder = (orderId: string) => {
-    if (
-      confirm("¿Está seguro que desea eliminar esta orden?")
-    ) {
-      setOrders(orders.filter((o) => o.id !== orderId));
-      setSelectedOrders(
-        selectedOrders.filter((id) => id !== orderId),
-      );
-    }
-  };
+  const handleAddDentist = (dentistData: DentistInput): Dentist => dentists.add(dentistData);
 
-  const handleCompleteOrder = (orderId: string) => {
-    setOrders(
-      orders.map((o) =>
-        o.id === orderId
-          ? { ...o, status: "completed" as const }
-          : o,
-      ),
-    );
-  };
+  const handleDeleteOrder = (orderId: string) => setDeleteTarget({ type: 'order', id: orderId });
+
+  const handleCompleteOrder = (orderId: string) => orders.update(orderId, { status: 'completed' });
 
   const handleToggleSelectOrder = (orderId: string) => {
     setSelectedOrders((prev) =>
-      prev.includes(orderId)
-        ? prev.filter((id) => id !== orderId)
-        : [...prev, orderId],
+      prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId],
     );
   };
 
-  const handleRequestGenerateReport = (
-    selectedOrdersList: Order[],
-  ) => {
+  const handleRequestGenerateReport = (selectedOrdersList: Order[]) => {
     setReportOrders(selectedOrdersList);
     setShowReportDialog(true);
   };
 
-  const handleGenerateReport = (
-    selectedOrdersList: Order[],
-    deliveryDate: string,
-  ) => {
-    const totalPrice = selectedOrdersList.reduce(
-      (sum, order) =>
-        sum +
-        order.services.reduce(
-          (s, service) => s + service.price,
-          0,
-        ),
-      0,
-    );
+  const handleGenerateReport = (selectedOrdersList: Order[], deliveryDate: string) => {
+    const totalPrice = sumOrders(selectedOrdersList);
 
     const report: JobReport = {
-      id: String(Date.now()),
+      id: crypto.randomUUID(),
       orders: selectedOrdersList,
       totalPrice,
       deliveryDate,
     };
 
-    setOrders(
-      orders.map((o) =>
-        selectedOrdersList.find((so) => so.id === o.id)
-          ? { ...o, status: "submitted" as const }
-          : o,
+    orders.setItems((prev) =>
+      prev.map((o) =>
+        selectedOrdersList.some((so) => so.id === o.id) ? { ...o, status: 'submitted' } : o,
       ),
     );
 
@@ -244,37 +209,18 @@ export function RyesDashboard() {
     setShowDentistForm(true);
   };
 
-  const handleSubmitDentist = (
-    dentistData: Partial<Dentist>,
-  ) => {
+  const handleSubmitDentist = (dentistData: DentistInput) => {
     if (dentistData.id) {
-      setDentists(
-        dentists.map((d) =>
-          d.id === dentistData.id
-            ? ({ ...d, ...dentistData } as Dentist)
-            : d,
-        ),
-      );
+      dentists.update(dentistData.id, dentistData);
     } else {
-      const newDentist: Dentist = {
-        ...dentistData,
-        id: String(dentists.length + 1),
-      } as Dentist;
-      setDentists([...dentists, newDentist]);
+      dentists.add(dentistData);
     }
     setShowDentistForm(false);
     setEditingDentist(null);
   };
 
-  const handleDeleteDentist = (dentistId: string) => {
-    if (
-      confirm(
-        "¿Está seguro que desea eliminar este odontólogo?",
-      )
-    ) {
-      setDentists(dentists.filter((d) => d.id !== dentistId));
-    }
-  };
+  const handleDeleteDentist = (dentistId: string) =>
+    setDeleteTarget({ type: 'dentist', id: dentistId });
 
   const handleCreatePatient = () => {
     setEditingPatient(null);
@@ -286,35 +232,18 @@ export function RyesDashboard() {
     setShowPatientForm(true);
   };
 
-  const handleSubmitPatient = (
-    patientData: Partial<Patient>,
-  ) => {
+  const handleSubmitPatient = (patientData: PatientInput) => {
     if (patientData.id) {
-      setPatients(
-        patients.map((p) =>
-          p.id === patientData.id
-            ? ({ ...p, ...patientData } as Patient)
-            : p,
-        ),
-      );
+      patients.update(patientData.id, patientData);
     } else {
-      const newPatient: Patient = {
-        ...patientData,
-        id: String(patients.length + 1),
-      } as Patient;
-      setPatients([...patients, newPatient]);
+      patients.add(patientData);
     }
     setShowPatientForm(false);
     setEditingPatient(null);
   };
 
-  const handleDeletePatient = (patientId: string) => {
-    if (
-      confirm("¿Está seguro que desea eliminar este paciente?")
-    ) {
-      setPatients(patients.filter((p) => p.id !== patientId));
-    }
-  };
+  const handleDeletePatient = (patientId: string) =>
+    setDeleteTarget({ type: 'patient', id: patientId });
 
   const handleCreateService = () => {
     setEditingService(null);
@@ -326,90 +255,70 @@ export function RyesDashboard() {
     setShowServiceForm(true);
   };
 
-  const handleSubmitService = (
-    serviceData: Partial<Service>,
-  ) => {
+  const handleSubmitService = (serviceData: ServiceInput) => {
     if (serviceData.id) {
-      setServices(
-        services.map((s) =>
-          s.id === serviceData.id
-            ? ({ ...s, ...serviceData } as Service)
-            : s,
-        ),
-      );
+      services.update(serviceData.id, serviceData);
     } else {
-      const newService: Service = {
-        ...serviceData,
-        id: String(services.length + 1),
-      } as Service;
-      setServices([...services, newService]);
+      services.add(serviceData);
     }
     setShowServiceForm(false);
     setEditingService(null);
   };
 
-  const handleDeleteService = (serviceId: string) => {
-    if (
-      confirm("¿Está seguro que desea eliminar este servicio?")
-    ) {
-      setServices(services.filter((s) => s.id !== serviceId));
+  const handleDeleteService = (serviceId: string) =>
+    setDeleteTarget({ type: 'service', id: serviceId });
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    const { type, id: targetId } = deleteTarget;
+    if (type === 'order') {
+      orders.remove(targetId);
+      setSelectedOrders((prev) => prev.filter((oId) => oId !== targetId));
+    } else if (type === 'patient') {
+      patients.remove(targetId);
+    } else if (type === 'dentist') {
+      dentists.remove(targetId);
+    } else {
+      services.remove(targetId);
     }
+    setDeleteTarget(null);
   };
 
+  const activeDeleteMessage = deleteTarget ? deleteMessages[deleteTarget.type] : null;
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto p-4 pb-20">
-        <div className="mb-6">
+        <header className="mb-6">
           <Link to="/">
             <Button variant="ghost" size="sm" className="mb-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver a Ryes
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold mb-1">
-            {ryes.location}
-          </h1>
+          <h1 className="text-2xl font-bold mb-1">{ryes.location}</h1>
           <p className="text-gray-600">Gestión de Órdenes</p>
-        </div>
+        </header>
 
-        <Tabs
-          value={view}
-          onValueChange={(v) => setView(v as View)}
-          className="space-y-4"
-        >
+        <Tabs value={view} onValueChange={(v) => setView(v as View)} className="space-y-4">
           <TabsList className="grid w-full grid-cols-5 h-auto">
-            <TabsTrigger
-              value="orders"
-              className="flex flex-col items-center gap-1 py-2"
-            >
+            <TabsTrigger value="orders" className="flex flex-col items-center gap-1 py-2">
               <ClipboardList className="w-4 h-4" />
               <span className="text-xs">Órdenes</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="patients"
-              className="flex flex-col items-center gap-1 py-2"
-            >
+            <TabsTrigger value="patients" className="flex flex-col items-center gap-1 py-2">
               <UserCheck className="w-4 h-4" />
               <span className="text-xs">Pacientes</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="dentists"
-              className="flex flex-col items-center gap-1 py-2"
-            >
+            <TabsTrigger value="dentists" className="flex flex-col items-center gap-1 py-2">
               <Users className="w-4 h-4" />
               <span className="text-xs">Odontólogos</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="services"
-              className="flex flex-col items-center gap-1 py-2"
-            >
+            <TabsTrigger value="services" className="flex flex-col items-center gap-1 py-2">
               <Briefcase className="w-4 h-4" />
               <span className="text-xs">Servicios</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="reports"
-              className="flex flex-col items-center gap-1 py-2"
-            >
+            <TabsTrigger value="reports" className="flex flex-col items-center gap-1 py-2">
               <FileText className="w-4 h-4" />
               <span className="text-xs">Remitos</span>
             </TabsTrigger>
@@ -418,10 +327,7 @@ export function RyesDashboard() {
           <TabsContent value="orders" className="space-y-4">
             <div className="flex gap-2">
               <div className="flex-1">
-                <Select
-                  value={filterStatus}
-                  onValueChange={setFilterStatus}
-                >
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger>
                     <div className="flex items-center gap-2">
                       <Filter className="w-4 h-4" />
@@ -429,18 +335,10 @@ export function RyesDashboard() {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">
-                      Todas las órdenes
-                    </SelectItem>
-                    <SelectItem value="pending">
-                      Pendientes
-                    </SelectItem>
-                    <SelectItem value="completed">
-                      Completadas
-                    </SelectItem>
-                    <SelectItem value="submitted">
-                      Entregadas
-                    </SelectItem>
+                    <SelectItem value="all">Todas las órdenes</SelectItem>
+                    <SelectItem value="pending">Pendientes</SelectItem>
+                    <SelectItem value="completed">Completadas</SelectItem>
+                    <SelectItem value="submitted">Entregadas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -470,7 +368,7 @@ export function RyesDashboard() {
             </div>
 
             <PatientList
-              patients={patients}
+              patients={patients.items}
               onEdit={handleEditPatient}
               onDelete={handleDeletePatient}
             />
@@ -485,7 +383,7 @@ export function RyesDashboard() {
             </div>
 
             <DentistList
-              dentists={dentists}
+              dentists={dentists.items}
               onEdit={handleEditDentist}
               onDelete={handleDeleteDentist}
             />
@@ -500,17 +398,14 @@ export function RyesDashboard() {
             </div>
 
             <ServiceList
-              services={services}
+              services={services.items}
               onEdit={handleEditService}
               onDelete={handleDeleteService}
             />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">
-            <JobReportList
-              reports={reports}
-              onView={handleViewReport}
-            />
+            <JobReportList reports={reports} onView={handleViewReport} />
           </TabsContent>
         </Tabs>
       </div>
@@ -518,11 +413,12 @@ export function RyesDashboard() {
       {showOrderForm && (
         <OrderForm
           order={editingOrder}
-          patients={patients}
-          dentists={dentists}
-          services={services}
+          patients={patients.items}
+          dentists={dentists.items}
+          services={services.items}
           onSubmit={handleSubmitOrder}
           onAddPatient={handleAddPatient}
+          onAddDentist={handleAddDentist}
           onCancel={() => {
             setShowOrderForm(false);
             setEditingOrder(null);
@@ -564,10 +460,7 @@ export function RyesDashboard() {
       )}
 
       {currentReport && (
-        <JobReportView
-          report={currentReport}
-          onClose={() => setCurrentReport(null)}
-        />
+        <JobReportView report={currentReport} onClose={() => setCurrentReport(null)} />
       )}
 
       {showReportDialog && (
@@ -577,6 +470,29 @@ export function RyesDashboard() {
           onCancel={() => setShowReportDialog(false)}
         />
       )}
-    </div>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{activeDeleteMessage?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{activeDeleteMessage?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={handleConfirmDelete}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </main>
   );
 }

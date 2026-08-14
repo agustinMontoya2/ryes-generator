@@ -1,10 +1,11 @@
-import { Order, OrderStatus } from '../types';
+import type { Order } from '../types';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
 import { Calendar, User, Clock, CheckCircle, Package, Pencil, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { sumOrder, sumOrders } from '../utils/orders';
+import { formatCurrency, formatDate } from '../utils/format';
 
 interface OrderListProps {
   orders: Order[];
@@ -17,9 +18,18 @@ interface OrderListProps {
 }
 
 const statusConfig = {
-  pending: { label: 'Pendiente', color: 'bg-yellow-500' },
-  completed: { label: 'Completado', color: 'bg-green-500' },
-  submitted: { label: 'Entregado', color: 'bg-blue-500' },
+  pending: {
+    label: 'Pendiente',
+    className: 'bg-yellow-500 text-yellow-950',
+  },
+  completed: {
+    label: 'Completado',
+    className: 'bg-green-500 text-green-950',
+  },
+  submitted: {
+    label: 'Entregado',
+    className: 'bg-blue-500 text-blue-950',
+  },
 };
 
 export function OrderList({
@@ -31,7 +41,10 @@ export function OrderList({
   selectedOrders,
   onToggleSelect,
 }: OrderListProps) {
-  const completedOrders = orders.filter(o => o.status === 'completed' && selectedOrders.includes(o.id));
+  const completedOrders = orders.filter(
+    (o) => o.status === 'completed' && selectedOrders.includes(o.id),
+  );
+  const completedTotal = sumOrders(completedOrders);
 
   return (
     <div className="space-y-4">
@@ -39,14 +52,8 @@ export function OrderList({
         <Card className="p-4 bg-green-50 border-green-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">
-                {completedOrders.length} órdenes seleccionadas
-              </p>
-              <p className="text-sm text-gray-600">
-                Total: ${completedOrders.reduce((sum, o) =>
-                  sum + o.services.reduce((s, service) => s + service.price, 0), 0
-                ).toLocaleString()}
-              </p>
+              <p className="font-medium">{completedOrders.length} órdenes seleccionadas</p>
+              <p className="text-sm text-gray-600">Total: {formatCurrency(completedTotal)}</p>
             </div>
             <Button onClick={() => onRequestGenerateReport(completedOrders)}>
               <Package className="w-4 h-4 mr-2" />
@@ -57,35 +64,29 @@ export function OrderList({
       )}
 
       {orders.map((order) => {
-        const totalPrice = order.services.reduce((sum, service) => sum + service.price, 0);
+        const totalPrice = sumOrder(order);
         const isSelected = selectedOrders.includes(order.id);
         const isCompleted = order.status === 'completed';
+        const status = statusConfig[order.status];
 
         return (
-          <Card
-            key={order.id}
-            className={`p-4 ${isSelected ? 'ring-2 ring-green-500' : ''} ${isCompleted ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-            onClick={() => isCompleted && onToggleSelect(order.id)}
-          >
+          <Card key={order.id} className={`p-4 ${isSelected ? 'ring-2 ring-green-500' : ''}`}>
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{order.patient.fullname}</h3>
-                    <Badge className={statusConfig[order.status].color}>
-                      {statusConfig[order.status].label}
-                    </Badge>
+                    <Badge className={status.className}>{status.label}</Badge>
                   </div>
                   <p className="text-sm text-gray-600">DNI: {order.patient.dni}</p>
                 </div>
                 {isCompleted && (
-                  <div className="flex items-center gap-1">
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                    }`}>
-                      {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
-                    </div>
-                  </div>
+                  <Checkbox
+                    aria-label={`Seleccionar orden de ${order.patient.fullname} para remito`}
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleSelect(order.id)}
+                    className="size-5"
+                  />
                 )}
               </div>
 
@@ -96,7 +97,7 @@ export function OrderList({
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Calendar className="w-4 h-4" />
-                  <span>{format(new Date(order.dueDate), 'dd/MM/yyyy', { locale: es })}</span>
+                  <span>{formatDate(order.dueDate)}</span>
                 </div>
               </div>
 
@@ -106,13 +107,13 @@ export function OrderList({
                   {order.services.map((service) => (
                     <div key={service.id} className="flex justify-between text-sm">
                       <span className="text-gray-600">{service.name}</span>
-                      <span className="font-medium">${service.price.toLocaleString()}</span>
+                      <span className="font-medium">{formatCurrency(service.price)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="flex justify-between text-sm font-semibold mt-2 pt-2 border-t">
                   <span>Total:</span>
-                  <span>${totalPrice.toLocaleString()}</span>
+                  <span>{formatCurrency(totalPrice)}</span>
                 </div>
               </div>
 
@@ -121,10 +122,8 @@ export function OrderList({
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(order);
-                  }}
+                  aria-label={`Editar orden de ${order.patient.fullname}`}
+                  onClick={() => onEdit(order)}
                 >
                   <Pencil className="w-4 h-4 mr-1" />
                   Editar
@@ -133,10 +132,8 @@ export function OrderList({
                   <Button
                     size="sm"
                     className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onComplete(order.id);
-                    }}
+                    aria-label={`Completar orden de ${order.patient.fullname}`}
+                    onClick={() => onComplete(order.id)}
                   >
                     <CheckCircle className="w-4 h-4 mr-1" />
                     Completar
@@ -145,10 +142,8 @@ export function OrderList({
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(order.id);
-                  }}
+                  aria-label={`Eliminar orden de ${order.patient.fullname}`}
+                  onClick={() => onDelete(order.id)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

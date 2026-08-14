@@ -1,9 +1,10 @@
-import { JobReport } from '../types';
+import type { JobReport } from '../types';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { X, Printer, Calendar, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Printer, Calendar, DollarSign } from 'lucide-react';
+import { sumOrder } from '../utils/orders';
+import { formatCurrency, formatDate, formatDateTime } from '../utils/format';
 
 interface JobReportViewProps {
   report: JobReport;
@@ -16,18 +17,19 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto print:static print:translate-x-0 print:translate-y-0 print:top-auto print:left-auto print:max-w-none print:max-h-none print:overflow-visible print:border-0 print:shadow-none print:p-0">
+        <DialogHeader className="print:hidden">
+          <DialogTitle>Remito #{report.id}</DialogTitle>
+        </DialogHeader>
+
         <div className="p-6 space-y-6" id="remito-content">
-          <div className="flex items-center justify-between print:justify-center">
-            <h2 className="text-2xl font-bold">Remito #{report.id}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold print:text-center">Remito #{report.id}</h2>
             <div className="flex gap-2 print:hidden">
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="w-4 h-4 mr-2" />
                 Imprimir
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="w-5 h-5" />
               </Button>
             </div>
           </div>
@@ -35,18 +37,20 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
           <div className="border-b pb-4">
             <div className="flex items-center gap-2 text-gray-600 mb-2">
               <Calendar className="w-5 h-5" />
-              <span>Fecha de entrega: {format(new Date(report.deliveryDate), 'dd/MM/yyyy', { locale: es })}</span>
+              <span>Fecha de entrega: {formatDate(report.deliveryDate)}</span>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
               <DollarSign className="w-5 h-5" />
-              <span className="text-xl font-bold text-black">Total: ${report.totalPrice.toLocaleString()}</span>
+              <span className="text-xl font-bold text-black">
+                Total: {formatCurrency(report.totalPrice)}
+              </span>
             </div>
           </div>
 
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Órdenes incluidas:</h3>
             {report.orders.map((order) => {
-              const totalPrice = order.services.reduce((sum, s) => sum + s.price, 0);
+              const totalPrice = sumOrder(order);
 
               return (
                 <Card key={order.id} className="p-4 border-2">
@@ -55,7 +59,9 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
                       <div>
                         <h4 className="font-semibold text-lg">{order.patient.fullname}</h4>
                         <p className="text-sm text-gray-600">DNI: {order.patient.dni}</p>
-                        <p className="text-sm text-gray-600">Dr. {order.dentist.name} {order.dentist.lastname}</p>
+                        <p className="text-sm text-gray-600">
+                          Dr. {order.dentist.name} {order.dentist.lastname}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-gray-600">Orden #{order.id}</p>
@@ -69,13 +75,13 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
                         {order.services.map((service) => (
                           <div key={service.id} className="flex justify-between text-sm">
                             <span>{service.name}</span>
-                            <span className="font-medium">${service.price.toLocaleString()}</span>
+                            <span className="font-medium">{formatCurrency(service.price)}</span>
                           </div>
                         ))}
                       </div>
                       <div className="flex justify-between font-semibold mt-2 pt-2 border-t">
                         <span>Subtotal:</span>
-                        <span>${totalPrice.toLocaleString()}</span>
+                        <span>{formatCurrency(totalPrice)}</span>
                       </div>
                     </div>
                   </div>
@@ -87,15 +93,15 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
           <div className="border-t pt-4 mt-6">
             <div className="flex justify-between items-center text-xl font-bold">
               <span>TOTAL REMITO:</span>
-              <span className="text-2xl">${report.totalPrice.toLocaleString()}</span>
+              <span className="text-2xl">{formatCurrency(report.totalPrice)}</span>
             </div>
           </div>
 
           <div className="border-t pt-4 text-center text-sm text-gray-500">
-            <p>Generado el {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}</p>
+            <p>Generado el {formatDateTime(new Date())}</p>
           </div>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

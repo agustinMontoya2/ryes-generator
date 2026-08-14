@@ -1,7 +1,8 @@
-import { JobReport } from '../types';
+import type { JobReport } from '../types';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Eye, FileText } from 'lucide-react';
+import { formatCurrency, formatDate } from '../utils/format';
 
 interface JobReportListProps {
   reports: JobReport[];
@@ -29,31 +30,25 @@ export function JobReportList({ reports, onView }: JobReportListProps) {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold">
-                  Remito #{report.id.slice(-6)}
-                </h3>
+                <h3 className="font-semibold">Remito #{report.id.slice(-6)}</h3>
               </div>
 
               <div className="space-y-1 text-sm">
                 <p className="text-gray-600">
                   <span className="font-medium">Fecha de entrega:</span>{' '}
-                  {new Date(report.deliveryDate).toLocaleDateString('es-AR')}
+                  {formatDate(report.deliveryDate)}
                 </p>
                 <p className="text-gray-600">
-                  <span className="font-medium">Órdenes:</span>{' '}
-                  {report.orders.length}
+                  <span className="font-medium">Órdenes:</span> {report.orders.length}
                 </p>
                 <p className="text-gray-900 font-semibold">
-                  Total: ${report.totalPrice.toLocaleString('es-AR')}
+                  Total: {formatCurrency(report.totalPrice)}
                 </p>
               </div>
 
               <div className="mt-2 flex flex-wrap gap-1">
                 {report.orders.map((order) => (
-                  <span
-                    key={order.id}
-                    className="text-xs bg-gray-100 px-2 py-1 rounded"
-                  >
+                  <span key={order.id} className="text-xs bg-gray-100 px-2 py-1 rounded">
                     {order.patient.fullname}
                   </span>
                 ))}
@@ -63,6 +58,7 @@ export function JobReportList({ reports, onView }: JobReportListProps) {
             <Button
               variant="outline"
               size="icon"
+              aria-label="Ver remito"
               onClick={() => onView(report)}
             >
               <Eye className="w-4 h-4" />
