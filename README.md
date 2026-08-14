@@ -1,6 +1,6 @@
-# Ryes generar remitos
+# Lab Cv generar remitos
 
-Herramienta interna para gestionar las órdenes de trabajo de un laboratorio dental y generar remitos de entrega por Rye.
+Herramienta interna para gestionar las órdenes de trabajo de un laboratorio dental y generar remitos de entrega por sucursal.
 
 ## Funcionalidades
 

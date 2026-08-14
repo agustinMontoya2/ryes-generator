@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router';
-import { RyesSelection } from './pages/RyesSelection';
-import { RyesDashboard } from './pages/RyesDashboard';
+import { BranchSelection } from './pages/BranchSelection';
+import { BranchDashboard } from './pages/BranchDashboard';
 import { Login } from './pages/Login';
 import { RequireAuth } from './auth/RequireAuth';
 
@@ -14,11 +14,11 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        Component: RyesSelection,
+        Component: BranchSelection,
       },
       {
-        path: '/ryes/:id',
-        Component: RyesDashboard,
+        path: '/branches/:id',
+        Component: BranchDashboard,
       },
     ],
   },

@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/AuthContext';
 import { DEMO_EMAIL, DEMO_PASSWORD } from '../auth/auth';
+import { BRAND_NAME } from '../config/brand';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -46,7 +47,7 @@ export function Login() {
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="w-full max-w-sm bg-card border border-border rounded-xl shadow-sm p-8 pb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-center">Ryes</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-center">{BRAND_NAME}</h1>
         <p className="text-sm text-muted-foreground text-center mt-1.5">
           Accedé a la gestión de tu laboratorio
         </p>
@@ -57,7 +58,7 @@ export function Login() {
             <Input
               id="login-email"
               type="email"
-              placeholder="ej: operador@ryes.com"
+              placeholder="ej: operador@lab-cv.com"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
