@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { UserCheck } from 'lucide-react';
 
 interface PatientFormProps {
   patient: Patient | null;
@@ -32,9 +33,23 @@ export function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle>{patient ? 'Editar Paciente' : 'Nuevo Paciente'}</DialogTitle>
+          <div className="flex items-start gap-3">
+            <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-accent text-accent-foreground">
+              <UserCheck className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg">
+                {patient ? 'Editar Paciente' : 'Nuevo Paciente'}
+              </DialogTitle>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {patient
+                  ? 'Actualizá los datos del paciente.'
+                  : 'Registrá un nuevo paciente en la agenda.'}
+              </p>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

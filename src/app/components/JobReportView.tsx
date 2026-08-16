@@ -1,10 +1,11 @@
 import type { JobReport } from '../types';
-import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Printer, Calendar, DollarSign } from 'lucide-react';
+import { Dialog, DialogContent } from './ui/dialog';
+import { Printer } from 'lucide-react';
+import { BrandTile } from './BrandTile';
 import { sumOrder } from '../utils/orders';
 import { formatCurrency, formatDate, formatDateTime } from '../utils/format';
+import { BRAND_NAME } from '../config/brand';
 
 interface JobReportViewProps {
   report: JobReport;
@@ -18,87 +19,121 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto print:static print:translate-x-0 print:translate-y-0 print:top-auto print:left-auto print:max-w-none print:max-h-none print:overflow-visible print:border-0 print:shadow-none print:p-0">
-        <DialogHeader className="print:hidden">
-          <DialogTitle>Remito #{report.id}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 print:static print:inset-auto print:bottom-auto print:left-0 print:top-0 print:max-w-none print:translate-x-0 print:translate-y-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none print:p-0 sm:max-w-[560px]">
+        <div className="flex items-center justify-between gap-3 px-6 pb-0 pt-5 no-print">
+          <div className="flex items-center gap-3">
+            <div className="flex size-[42px] items-center justify-center rounded-[13px] bg-accent text-accent-foreground">
+              <Printer className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-[18px] font-bold tracking-[-0.01em]">
+                Remito #{report.id.slice(-6)}
+              </h2>
+              <p className="text-[13px] text-muted-foreground">Vista previa e impresión</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Printer className="size-4" />
+            Imprimir
+          </Button>
+        </div>
 
-        <div className="p-6 space-y-6" id="remito-content">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold print:text-center">Remito #{report.id}</h2>
-            <div className="flex gap-2 print:hidden">
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir
-              </Button>
+        <div className="px-6 pb-6 pt-4 no-print">
+          <div className="h-px bg-border" />
+        </div>
+
+        <div id="remito-content" className="space-y-5 px-6 pb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <BrandTile size="sm" />
+              <div>
+                <h2 className="font-display text-[19px] font-extrabold tracking-[-0.01em]">
+                  Remito #{report.id.slice(-6)}
+                </h2>
+                <p className="text-[12.5px] text-muted-foreground">
+                  {BRAND_NAME} · Entrega de trabajos
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="border-b pb-4">
-            <div className="flex items-center gap-2 text-gray-600 mb-2">
-              <Calendar className="w-5 h-5" />
-              <span>Fecha de entrega: {formatDate(report.deliveryDate)}</span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="rounded-[14px] border border-border bg-muted p-3">
+              <p className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                Fecha de entrega
+              </p>
+              <p className="mt-1 font-display text-[15px] font-bold">
+                {formatDate(report.deliveryDate)}
+              </p>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <DollarSign className="w-5 h-5" />
-              <span className="text-xl font-bold text-black">
-                Total: {formatCurrency(report.totalPrice)}
-              </span>
+            <div className="rounded-[14px] border border-border bg-muted p-3">
+              <p className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                Total
+              </p>
+              <p className="mt-1 font-display text-[15px] font-bold">
+                {formatCurrency(report.totalPrice)}
+              </p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Órdenes incluidas:</h3>
-            {report.orders.map((order) => {
-              const totalPrice = sumOrder(order);
+          <div>
+            <p className="mb-2.5 text-[13px] font-bold text-muted-foreground">
+              Trabajos incluidos:
+            </p>
+            <div className="space-y-2.5">
+              {report.orders.map((order) => {
+                const totalPrice = sumOrder(order);
 
-              return (
-                <Card key={order.id} className="p-4 border-2">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
+                return (
+                  <div key={order.id} className="rounded-[14px] border border-border p-3.5">
+                    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                       <div>
-                        <h4 className="font-semibold text-lg">{order.patient.fullname}</h4>
-                        <p className="text-sm text-gray-600">DNI: {order.patient.dni}</p>
-                        <p className="text-sm text-gray-600">
-                          Dr. {order.dentist.name} {order.dentist.lastname}
+                        <h5 className="font-display text-[14.5px] font-bold">
+                          {order.patient.fullname}
+                        </h5>
+                        <p className="text-[12.5px] text-muted-foreground">
+                          DNI: {order.patient.dni} · Dr. {order.dentist.name}{' '}
+                          {order.dentist.lastname}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-600">Orden #{order.id}</p>
-                        <p className="text-sm text-gray-600">{order.lab}</p>
+                        <p className="text-[12.5px] text-muted-foreground">
+                          Trabajo #{order.id.slice(-6)}
+                        </p>
+                        <p className="text-[12.5px] text-muted-foreground">{order.lab}</p>
                       </div>
                     </div>
 
-                    <div className="border-t pt-2">
-                      <p className="font-medium text-sm mb-2">Servicios realizados:</p>
-                      <div className="space-y-1">
-                        {order.services.map((service) => (
-                          <div key={service.id} className="flex justify-between text-sm">
-                            <span>{service.name}</span>
-                            <span className="font-medium">{formatCurrency(service.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex justify-between font-semibold mt-2 pt-2 border-t">
-                        <span>Subtotal:</span>
-                        <span>{formatCurrency(totalPrice)}</span>
+                    <div className="mt-3 space-y-1 border-t border-border pt-3">
+                      {order.services.map((service) => (
+                        <div key={service.id} className="flex justify-between gap-3 text-sm">
+                          <span className="text-muted-foreground">{service.name}</span>
+                          <span className="font-semibold whitespace-nowrap">
+                            {formatCurrency(service.price)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between gap-3 pt-1 text-sm font-bold">
+                        <span>Subtotal</span>
+                        <span className="font-display">{formatCurrency(totalPrice)}</span>
                       </div>
                     </div>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          <div className="border-t pt-4 mt-6">
-            <div className="flex justify-between items-center text-xl font-bold">
-              <span>TOTAL REMITO:</span>
-              <span className="text-2xl">{formatCurrency(report.totalPrice)}</span>
+                );
+              })}
             </div>
           </div>
 
-          <div className="border-t pt-4 text-center text-sm text-gray-500">
-            <p>Generado el {formatDateTime(new Date())}</p>
+          <div className="flex items-end justify-between gap-4 border-t-[1.5px] border-foreground pt-4">
+            <div>
+              <p className="text-[12px] font-semibold text-muted-foreground">TOTAL REMITO</p>
+              <p className="font-display text-[22px] font-extrabold tracking-[-0.02em]">
+                {formatCurrency(report.totalPrice)}
+              </p>
+            </div>
+            <p className="text-[12px] text-muted-foreground no-print">
+              Generado el {formatDateTime(new Date())}
+            </p>
           </div>
         </div>
       </DialogContent>

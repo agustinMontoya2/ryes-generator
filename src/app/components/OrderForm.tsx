@@ -15,8 +15,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { ClipboardList } from 'lucide-react';
 import { sumServices } from '../utils/orders';
 import { formatCurrency } from '../utils/format';
+import { cn } from './ui/utils';
 
 interface OrderFormProps {
   order?: Order | null;
@@ -179,13 +181,27 @@ export function OrderForm({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>{order ? 'Editar Orden' : 'Nueva Orden'}</DialogTitle>
+          <div className="flex items-start gap-3">
+            <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-accent text-accent-foreground">
+              <ClipboardList className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg">
+                {order ? 'Editar trabajo' : 'Nuevo trabajo'}
+              </DialogTitle>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {order
+                  ? 'Actualizá los datos de la orden de trabajo.'
+                  : 'Registrá una nueva orden de trabajo para el laboratorio.'}
+              </p>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="patientDni">DNI del Paciente *</Label>
             <Input
               id="patientDni"
@@ -200,14 +216,18 @@ export function OrderForm({
               placeholder="Ingrese DNI"
               required
             />
-            {existingPatient && (
-              <p className="text-sm text-green-600">
+            {existingPatient ? (
+              <p className="rounded-[10px] bg-[oklch(94%_0.05_155)] px-3 py-2 text-[12.5px] text-[oklch(32%_0.1_155)]">
                 Paciente encontrado: {existingPatient.fullname}
               </p>
-            )}
+            ) : formData.patientDni ? (
+              <p className="rounded-[10px] bg-[oklch(94%_0.03_240)] px-3 py-2 text-[12.5px] text-[oklch(36%_0.09_250)]">
+                DNI no encontrado. Se creará un nuevo paciente.
+              </p>
+            ) : null}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="patientName">Nombre del Paciente *</Label>
             <Input
               id="patientName"
@@ -222,16 +242,10 @@ export function OrderForm({
               placeholder="Ingrese nombre completo"
               required
               disabled={isPatientNameDisabled}
-              className={isPatientNameDisabled ? 'bg-gray-100' : ''}
             />
-            {!existingPatient && formData.patientDni && (
-              <p className="text-sm text-blue-600">
-                DNI no encontrado. Se creará un nuevo paciente.
-              </p>
-            )}
           </div>
 
-          <div className="space-y-2 relative">
+          <div className="relative space-y-1.5">
             <Label htmlFor="dentist">Odontólogo *</Label>
             <Input
               id="dentist"
@@ -263,7 +277,7 @@ export function OrderForm({
               <div
                 id="dentist-suggestions"
                 role="listbox"
-                className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto"
+                className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-[12px] border border-border bg-popover p-1.5 shadow-[0_2px_4px_oklch(22%_0.02_250/0.05),0_12px_28px_oklch(22%_0.02_250/0.09)]"
               >
                 {dentistSuggestions.map((dentist, index) => (
                   <div
@@ -271,24 +285,30 @@ export function OrderForm({
                     id={`dentist-suggestion-${dentist.id}`}
                     role="option"
                     aria-selected={index === activeSuggestion}
-                    className={`px-3 py-2 cursor-pointer ${
-                      index === activeSuggestion ? 'bg-blue-100' : 'hover:bg-gray-100'
-                    }`}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-sm',
+                      index === activeSuggestion ? 'bg-muted' : 'hover:bg-muted',
+                    )}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       selectDentist(dentist);
                     }}
                     onMouseEnter={() => setActiveSuggestion(index)}
                   >
-                    Dr. {dentist.name} {dentist.lastname}
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-[9px] bg-muted text-[11px] font-bold text-muted-foreground">
+                      Dr
+                    </span>
+                    <span className="truncate font-medium">
+                      Dr. {dentist.name} {dentist.lastname}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
               <Label htmlFor="dispatchDate">Fecha de Despacho *</Label>
               <Input
                 id="dispatchDate"
@@ -304,7 +324,7 @@ export function OrderForm({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="dueDate">Fecha de Entrega *</Label>
               <Input
                 id="dueDate"
@@ -321,7 +341,7 @@ export function OrderForm({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="lab">Laboratorio</Label>
             <Input
               id="lab"
@@ -331,39 +351,50 @@ export function OrderForm({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Servicios * (seleccione al menos uno)</Label>
-            <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
-              {services.map((service) => (
-                <div key={service.id} className="flex items-center justify-between space-x-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`service-${service.id}`}
-                      checked={formData.selectedServices.includes(service.id)}
-                      onCheckedChange={() => toggleService(service.id)}
-                    />
-                    <label htmlFor={`service-${service.id}`} className="text-sm cursor-pointer">
-                      {service.name}
-                    </label>
+            <div className="max-h-[220px] space-y-2 overflow-y-auto rounded-[12px] border border-border p-2.5">
+              {services.map((service) => {
+                const checked = formData.selectedServices.includes(service.id);
+                return (
+                  <div
+                    key={service.id}
+                    className={cn(
+                      'flex items-center justify-between gap-2 rounded-[12px] border px-3 py-2.5 transition-colors',
+                      checked
+                        ? 'border-[oklch(70%_0.1_170)] bg-[oklch(96.5%_0.035_170)]'
+                        : 'border-transparent hover:bg-muted',
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Checkbox
+                        id={`service-${service.id}`}
+                        checked={checked}
+                        onCheckedChange={() => toggleService(service.id)}
+                      />
+                      <label htmlFor={`service-${service.id}`} className="cursor-pointer text-sm">
+                        {service.name}
+                      </label>
+                    </div>
+                    <span className="text-sm font-semibold">{formatCurrency(service.price)}</span>
                   </div>
-                  <span className="text-sm font-medium">{formatCurrency(service.price)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {totalPrice > 0 && (
-              <div className="flex justify-between font-semibold pt-2 border-t">
-                <span>Total:</span>
-                <span>{formatCurrency(totalPrice)}</span>
+              <div className="flex justify-between gap-3 border-t border-border pt-2.5 font-bold">
+                <span>Total</span>
+                <span className="font-display">{formatCurrency(totalPrice)}</span>
               </div>
             )}
           </div>
 
-          <DialogFooter className="flex gap-3 pt-4 sm:justify-between">
+          <DialogFooter className="flex gap-2 pt-2 sm:justify-between">
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
               Cancelar
             </Button>
             <Button type="submit" className="flex-1">
-              {order ? 'Guardar Cambios' : 'Crear Orden'}
+              {order ? 'Guardar Cambios' : 'Crear Trabajo'}
             </Button>
           </DialogFooter>
         </form>
