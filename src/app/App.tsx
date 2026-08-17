@@ -4,6 +4,7 @@ import { router } from './routes';
 import { AuthProvider } from './auth/AuthContext';
 import { BRAND_NAME } from './config/brand';
 import { Toaster } from './components/ui/sonner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   useEffect(() => {
@@ -11,11 +12,11 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <ErrorBoundary>
       <AuthProvider>
         <RouterProvider router={router} />
       </AuthProvider>
       <Toaster position="top-center" richColors />
-    </>
+    </ErrorBoundary>
   );
 }

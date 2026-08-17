@@ -12,6 +12,17 @@ export default defineConfig({
     },
   },
 
+  // Proxy de desarrollo: redirige /api/* al backend en localhost:3000
+  // Esto es necesario solo en modo dev; en produccion el backend maneja CORS.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 });

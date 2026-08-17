@@ -1,7 +1,7 @@
 import type { Service } from '../types';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 
 interface ServiceListProps {
@@ -35,15 +35,15 @@ export function ServiceList({ services, onEdit, onDelete }: ServiceListProps) {
                 aria-label={`Editar servicio ${service.name}`}
                 onClick={() => onEdit(service)}
               >
-                <Edit2 className="w-4 h-4" />
+                <Pencil className="w-4 h-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="icon"
                 aria-label={`Eliminar servicio ${service.name}`}
                 onClick={() => onDelete(service.id)}
               >
-                <Trash2 className="w-4 h-4 text-red-600" />
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           </div>

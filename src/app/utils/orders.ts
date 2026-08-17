@@ -1,7 +1,7 @@
 import type { Order, Service } from '../types';
 
 export function sumServices(services: Service[]): number {
-  return services.reduce((sum, service) => sum + service.price, 0);
+  return Math.round(services.reduce((sum, service) => sum + service.price, 0) * 100) / 100;
 }
 
 export function sumOrder(order: Order): number {

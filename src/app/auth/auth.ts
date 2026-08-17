@@ -1,11 +1,12 @@
 import type { LoginResponse, User } from '../types';
-import { BRAND_SLUG } from '../config/brand';
+import { BRAND_SLUG, TOKEN_KEY, USER_KEY } from '../config/brand';
 
-const TOKEN_KEY = `${BRAND_SLUG}_token`;
-const USER_KEY = `${BRAND_SLUG}_user`;
+// TODO: reemplazar con llamada real al backend cuando esté disponible
+const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL || `operador@${BRAND_SLUG}.com`;
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || `${BRAND_SLUG}2026`;
 
-export const DEMO_EMAIL = `operador@${BRAND_SLUG}.com`;
-export const DEMO_PASSWORD = `${BRAND_SLUG}2026`;
+export const DEMO_EMAIL_FOR_UI = DEMO_EMAIL;
+export const DEMO_PASSWORD_FOR_UI = DEMO_PASSWORD;
 
 const DEMO_USER: User = {
   id: `u-${BRAND_SLUG}-1`,
@@ -37,6 +38,11 @@ export function getSession(): LoginResponse | null {
   if (!accessToken || !rawUser) return null;
 
   try {
+    const payload = JSON.parse(atob(accessToken));
+    if (payload.exp && payload.exp < Date.now()) {
+      clearSession();
+      return null;
+    }
     return { accessToken, user: JSON.parse(rawUser) as User };
   } catch {
     return null;
