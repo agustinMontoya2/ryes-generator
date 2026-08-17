@@ -13,10 +13,6 @@ export function listOrders(params: ListOrdersParams): Promise<Paginated<Order>> 
   return request<Paginated<Order>>('/orders', { branchId, query });
 }
 
-export function getOrder(id: string, branchId: string): Promise<Order> {
-  return request<Order>(`/orders/${id}`, { branchId });
-}
-
 export function createOrder(dto: CreateOrderDto, branchId: string): Promise<GenericID> {
   return request<GenericID>('/orders', { method: 'POST', body: dto, branchId });
 }

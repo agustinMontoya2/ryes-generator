@@ -4,7 +4,7 @@ import { Navigate } from 'react-router';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/AuthContext';
-import { DEMO_EMAIL, DEMO_PASSWORD } from '../auth/auth';
+import { DEMO_EMAIL_FOR_UI, DEMO_PASSWORD_FOR_UI } from '../auth/auth';
 import { BRAND_NAME } from '../config/brand';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -15,7 +15,6 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   if (status === 'authenticated') {
@@ -26,18 +25,15 @@ export function Login() {
     event.preventDefault();
 
     if (!email.trim() || !password) {
-      setError('Por favor complete todos los campos');
       toast.error('Por favor complete todos los campos');
       return;
     }
 
     setSubmitting(true);
-    setError(null);
 
     try {
       await login(email, password);
     } catch {
-      setError('Correo o contraseña incorrectos');
       toast.error('Correo o contraseña incorrectos');
     } finally {
       setSubmitting(false);
@@ -62,7 +58,6 @@ export function Login() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={!!error}
             />
           </div>
 
@@ -76,7 +71,6 @@ export function Login() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                aria-invalid={!!error}
                 className="pr-11"
               />
               <button
@@ -90,16 +84,16 @@ export function Login() {
             </div>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? 'Ingresando…' : 'Ingresar'}
           </Button>
         </form>
 
-        <p className="text-xs text-muted-foreground text-center mt-5 pt-4 border-t border-border">
-          Acceso demo: {DEMO_EMAIL} · {DEMO_PASSWORD}
-        </p>
+        {import.meta.env.DEV && (
+          <p className="text-xs text-muted-foreground text-center mt-5 pt-4 border-t border-border">
+            Acceso demo: {DEMO_EMAIL_FOR_UI} · {DEMO_PASSWORD_FOR_UI}
+          </p>
+        )}
       </div>
     </main>
   );

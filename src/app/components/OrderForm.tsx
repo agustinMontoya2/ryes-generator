@@ -26,6 +26,7 @@ interface OrderFormProps {
   branchId: string;
   services: Service[];
   servicesLoading?: boolean;
+  isSubmitting?: boolean;
   onSubmit: (order: OrderInput) => void;
   onCancel: () => void;
 }
@@ -35,6 +36,7 @@ export function OrderForm({
   branchId,
   services,
   servicesLoading = false,
+  isSubmitting = false,
   onSubmit,
   onCancel,
 }: OrderFormProps) {
@@ -76,11 +78,13 @@ export function OrderForm({
     }
 
     setPatientSearching(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await listPatients({ branchId, search: dniRaw, limit: 10 });
+        if (controller.signal.aborted) return;
         setPatientSuggestions(res.data);
-        const dniNumber = parseInt(dniRaw);
+        const dniNumber = Number(dniRaw);
         const exact = res.data.find((p) => p.dni === dniNumber);
         if (exact) {
           setExistingPatient(exact);
@@ -90,6 +94,7 @@ export function OrderForm({
           setActivePatientSuggestion(-1);
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setPatientSuggestions([]);
         toast.error(toErrorMessage(err));
       } finally {
@@ -97,7 +102,10 @@ export function OrderForm({
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [formData.patientDni, branchId]);
 
   useEffect(() => {
@@ -111,9 +119,11 @@ export function OrderForm({
     }
 
     setDentistSearching(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await listDentists({ branchId, search: name, limit: 10 });
+        if (controller.signal.aborted) return;
         setDentistSuggestions(res.data);
         const exact = res.data.find(
           (d) => `${d.name} ${d.lastname}`.toLowerCase() === name.toLowerCase(),
@@ -128,6 +138,7 @@ export function OrderForm({
           setActiveSuggestion(-1);
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setDentistSuggestions([]);
         toast.error(toErrorMessage(err));
       } finally {
@@ -135,7 +146,10 @@ export function OrderForm({
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [formData.dentistName, branchId]);
 
   const selectPatient = (patient: Patient) => {
@@ -213,6 +227,14 @@ export function OrderForm({
       return;
     }
 
+    if (!existingPatient) {
+      const dni = Number(formData.patientDni);
+      if (isNaN(dni) || dni <= 0) {
+        toast.error('Ingrese un DNI valido');
+        return;
+      }
+    }
+
     if (formData.dispatchDate && formData.dueDate && formData.dueDate < formData.dispatchDate) {
       toast.error('La fecha de entrega no puede ser menor a la fecha de despacho');
       return;
@@ -237,7 +259,7 @@ export function OrderForm({
         }
       : {
           fullname: formData.patientName,
-          dni: parseInt(formData.patientDni),
+          dni: Number(formData.patientDni),
         };
 
     onSubmit({
@@ -520,8 +542,8 @@ export function OrderForm({
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1">
-              {order ? 'Guardar Cambios' : 'Crear Orden'}
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando...' : order ? 'Guardar Cambios' : 'Crear Orden'}
             </Button>
           </DialogFooter>
         </form>

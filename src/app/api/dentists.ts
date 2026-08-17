@@ -11,10 +11,6 @@ export function listDentists(params: ListDentistsParams): Promise<Paginated<Dent
   return request<Paginated<Dentist>>('/dentists', { branchId, query });
 }
 
-export function getDentist(id: string, branchId: string): Promise<Dentist> {
-  return request<Dentist>(`/dentists/${id}`, { branchId });
-}
-
 export function createDentist(dto: CreateDentistDto, branchId: string): Promise<GenericID> {
   return request<GenericID>('/dentists', { method: 'POST', body: dto, branchId });
 }

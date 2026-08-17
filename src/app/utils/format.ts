@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export function formatCurrency(amount: number): string {
-  return amount.toLocaleString('es-AR');
+  return `$${amount.toLocaleString('es-AR')}`;
 }
 
 export function toDateOnly(value: string): string {

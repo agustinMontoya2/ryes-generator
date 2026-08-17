@@ -11,10 +11,6 @@ export function listServices(params: ListServicesParams): Promise<Paginated<Serv
   return request<Paginated<Service>>('/services', { branchId, query });
 }
 
-export function getService(id: string, branchId: string): Promise<Service> {
-  return request<Service>(`/services/${id}`, { branchId });
-}
-
 export function createService(dto: CreateServiceDto, branchId: string): Promise<GenericID> {
   return request<GenericID>('/services', { method: 'POST', body: dto, branchId });
 }

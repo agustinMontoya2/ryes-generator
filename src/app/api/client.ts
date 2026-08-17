@@ -1,7 +1,8 @@
-import { BRAND_SLUG } from '../config/brand';
+import { TOKEN_KEY } from '../config/brand';
+import { clearSession } from '../auth/auth';
 import type { Envelope, ErrorEnvelope } from './types';
 
-const TOKEN_KEY = `${BRAND_SLUG}_token`;
+const DEFAULT_TIMEOUT = Number(import.meta.env.VITE_REQUEST_TIMEOUT) || 15_000;
 
 export const API_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
 
@@ -32,10 +33,11 @@ interface RequestOptions {
   body?: unknown;
   branchId?: string;
   query?: Record<string, string | number | undefined>;
+  timeout?: number;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, branchId, query } = options;
+  const { method = 'GET', body, branchId, query, timeout = DEFAULT_TIMEOUT } = options;
 
   const url = new URL(API_URL + path, window.location.origin);
 
@@ -49,10 +51,15 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const headers = new Headers();
   headers.set('Accept', 'application/json');
-  headers.set('Content-Type', 'application/json');
+  if (method === 'POST' || method === 'PUT') {
+    headers.set('Content-Type', 'application/json');
+  }
   if (branchId) headers.set('x-branch-id', branchId);
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   let response: Response;
   try {
@@ -60,9 +67,18 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError({
+        statusCode: 408,
+        message: 'La conexion tardo demasiado. Intente nuevamente.',
+      });
+    }
     throw new ApiError({ statusCode: 0, message: 'No se pudo conectar con el servidor' });
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const text = await response.text();
@@ -74,6 +90,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearSession();
+      window.location.href = '/login';
+    }
     const errorEnvelope: ErrorEnvelope = (json as ErrorEnvelope) ?? {
       statusCode: response.status,
       message: `Error ${response.status}`,
@@ -81,5 +101,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     throw new ApiError(errorEnvelope);
   }
 
-  return (json as Envelope<T>)?.payload as T;
+  if (json && typeof json === 'object' && 'payload' in json) {
+    return (json as Envelope<T>).payload as T;
+  }
+  throw new ApiError({
+    statusCode: 500,
+    message: 'Respuesta del servidor con formato inesperado',
+  });
 }

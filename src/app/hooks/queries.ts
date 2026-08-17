@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Branch, Dentist, JobReport, Order, OrderStatus, Patient, Service } from '../types';
 import { getBranches } from '../api/branches';
 import { createPatient, deletePatient, listPatients, updatePatient } from '../api/patients';
@@ -42,7 +42,7 @@ export function usePatients(branchId: string, options?: { enabled?: boolean }) {
       const res = await listPatients({ branchId, limit: LIST_LIMIT });
       return res.data;
     },
-    enabled: options?.enabled,
+    enabled: !!branchId && (options?.enabled ?? true),
   });
 }
 
@@ -53,7 +53,7 @@ export function useDentists(branchId: string, options?: { enabled?: boolean }) {
       const res = await listDentists({ branchId, limit: LIST_LIMIT });
       return res.data;
     },
-    enabled: options?.enabled,
+    enabled: !!branchId && (options?.enabled ?? true),
   });
 }
 
@@ -64,7 +64,7 @@ export function useServices(branchId: string, options?: { enabled?: boolean }) {
       const res = await listServices({ branchId, limit: LIST_LIMIT });
       return res.data;
     },
-    enabled: options?.enabled,
+    enabled: !!branchId && (options?.enabled ?? true),
   });
 }
 
@@ -83,7 +83,8 @@ export function useOrders(
       });
       return res.data;
     },
-    enabled: options?.enabled,
+    enabled: !!branchId && (options?.enabled ?? true),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -94,7 +95,7 @@ export function useReports(branchId: string, options?: { enabled?: boolean }) {
       const res = await listReports({ branchId, limit: LIST_LIMIT });
       return res.data;
     },
-    enabled: options?.enabled,
+    enabled: !!branchId && (options?.enabled ?? true),
   });
 }
 
@@ -209,8 +210,6 @@ export function useCreateOrder() {
       createOrder(dto, branchId),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orders(vars.branchId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.patients(vars.branchId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dentists(vars.branchId) });
     },
   });
 }
@@ -222,8 +221,6 @@ export function useUpdateOrder() {
       updateOrder(id, dto, branchId),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orders(vars.branchId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.patients(vars.branchId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dentists(vars.branchId) });
     },
   });
 }

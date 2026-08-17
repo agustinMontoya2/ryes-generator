@@ -47,9 +47,11 @@ export function PatientForm({ patient, branchId, onSubmit, onCancel }: PatientFo
     }
 
     setSearching(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await listPatients({ branchId, search: dniRaw, limit: 10 });
+        if (controller.signal.aborted) return;
         setSuggestions(res.data);
         const dniNumber = Number(dniRaw);
         const exact = res.data.find((p) => p.dni === dniNumber);
@@ -60,6 +62,7 @@ export function PatientForm({ patient, branchId, onSubmit, onCancel }: PatientFo
           setActiveSuggestion(-1);
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setSuggestions([]);
         toast.error(toErrorMessage(err));
       } finally {
@@ -67,7 +70,10 @@ export function PatientForm({ patient, branchId, onSubmit, onCancel }: PatientFo
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [dni, branchId, isEditing]);
 
   const selectMatch = (match: Patient) => {

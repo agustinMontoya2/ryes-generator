@@ -368,14 +368,19 @@ export function BranchDashboard() {
       if (type === 'order') {
         await deleteOrderMutation.mutateAsync({ branchId, id: targetId });
         setSelectedOrders((prev) => prev.filter((oId) => oId !== targetId));
+        toast.success('Orden eliminada');
       } else if (type === 'patient') {
         await deletePatientMutation.mutateAsync({ branchId, id: targetId });
+        toast.success('Paciente eliminado');
       } else if (type === 'dentist') {
         await deleteDentistMutation.mutateAsync({ branchId, id: targetId });
+        toast.success('Odontologo eliminado');
       } else if (type === 'service') {
         await deleteServiceMutation.mutateAsync({ branchId, id: targetId });
+        toast.success('Servicio eliminado');
       } else {
         await deleteReportMutation.mutateAsync({ branchId, id: targetId });
+        toast.success('Remito eliminado');
       }
       setDeleteTarget(null);
     } catch (error) {
@@ -536,6 +541,7 @@ export function BranchDashboard() {
           branchId={branchId}
           services={services}
           servicesLoading={servicesLoading}
+          isSubmitting={createOrderMutation.isPending || updateOrderMutation.isPending}
           onSubmit={handleSubmitOrder}
           onCancel={() => {
             setShowOrderForm(false);

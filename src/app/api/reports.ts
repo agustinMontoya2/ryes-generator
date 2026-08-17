@@ -11,10 +11,6 @@ export function listReports(params: ListReportsParams): Promise<Paginated<JobRep
   return request<Paginated<JobReport>>('/reports', { branchId, query });
 }
 
-export function getReport(id: string, branchId: string): Promise<JobReport> {
-  return request<JobReport>(`/reports/${id}`, { branchId });
-}
-
 export function createReport(dto: CreateReportDto, branchId: string): Promise<GenericID> {
   return request<GenericID>('/reports', { method: 'POST', body: dto, branchId });
 }

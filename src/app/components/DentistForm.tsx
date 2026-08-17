@@ -43,9 +43,11 @@ export function DentistForm({ dentist, branchId, onSubmit, onCancel }: DentistFo
     }
 
     setSearching(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await listDentists({ branchId, search: fullName, limit: 10 });
+        if (controller.signal.aborted) return;
         setSuggestions(res.data);
         const exact = res.data.find(
           (d) => `${d.name} ${d.lastname}`.toLowerCase() === fullName.toLowerCase(),
@@ -57,6 +59,7 @@ export function DentistForm({ dentist, branchId, onSubmit, onCancel }: DentistFo
           setActiveSuggestion(-1);
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setSuggestions([]);
         toast.error(toErrorMessage(err));
       } finally {
@@ -64,7 +67,10 @@ export function DentistForm({ dentist, branchId, onSubmit, onCancel }: DentistFo
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [formData.name, formData.lastname, branchId, isEditing, fullName]);
 
   const selectMatch = (match: Dentist) => {
@@ -176,14 +182,8 @@ export function DentistForm({ dentist, branchId, onSubmit, onCancel }: DentistFo
               id="name"
               value={formData.name}
               onChange={(e) => {
-                const value = e.target.value;
-                setFormData((prev) => {
-                  if (selectedMatch && value !== selectedMatch.name) {
-                    return { name: value, lastname: '' };
-                  }
-                  return { ...prev, name: value };
-                });
                 setSelectedMatch(null);
+                setFormData((prev) => ({ ...prev, name: e.target.value }));
                 setShowSuggestions(true);
               }}
               onKeyDown={handleKeyDown}
@@ -202,14 +202,8 @@ export function DentistForm({ dentist, branchId, onSubmit, onCancel }: DentistFo
               id="lastname"
               value={formData.lastname}
               onChange={(e) => {
-                const value = e.target.value;
-                setFormData((prev) => {
-                  if (selectedMatch && value !== selectedMatch.lastname) {
-                    return { name: '', lastname: value };
-                  }
-                  return { ...prev, lastname: value };
-                });
                 setSelectedMatch(null);
+                setFormData((prev) => ({ ...prev, lastname: e.target.value }));
                 setShowSuggestions(true);
               }}
               onKeyDown={handleKeyDown}

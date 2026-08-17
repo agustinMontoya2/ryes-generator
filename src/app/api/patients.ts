@@ -11,15 +11,6 @@ export function listPatients(params: ListPatientsParams): Promise<Paginated<Pati
   return request<Paginated<Patient>>('/patients', { branchId, query });
 }
 
-export function getPatient(id: string, branchId: string): Promise<Patient> {
-  return request<Patient>(`/patients/${id}`, { branchId });
-}
-
-export function lookupPatientByDni(dni: number, branchId: string): Promise<Patient> {
-  // return request<Patient>('/patients/lookup', { branchId, query: { dni } });
-  return request<Patient>(`/patients?search=${dni}`, { branchId });
-}
-
 export function createPatient(dto: CreatePatientDto, branchId: string): Promise<GenericID> {
   return request<GenericID>('/patients', { method: 'POST', body: dto, branchId });
 }

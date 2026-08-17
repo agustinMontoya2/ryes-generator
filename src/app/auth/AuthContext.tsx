@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
 import { clearSession, getSession, login as authLogin, saveSession } from './auth';
@@ -15,19 +15,14 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>('loading');
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
+  const [status, setStatus] = useState<AuthStatus>(() => {
     const session = getSession();
-
-    if (session) {
-      setUser(session.user);
-      setStatus('authenticated');
-    } else {
-      setStatus('unauthenticated');
-    }
-  }, []);
+    return session ? 'authenticated' : 'unauthenticated';
+  });
+  const [user, setUser] = useState<User | null>(() => {
+    const session = getSession();
+    return session?.user ?? null;
+  });
 
   const login = useCallback(async (email: string, password: string) => {
     const session = await authLogin(email, password);
@@ -42,10 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('unauthenticated');
   }, []);
 
-  const value = useMemo(
-    () => ({ status, user, login, logout }),
-    [status, user, login, logout],
-  );
+  const value = useMemo(() => ({ status, user, login, logout }), [status, user, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

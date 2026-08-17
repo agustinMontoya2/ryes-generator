@@ -34,8 +34,14 @@ export function ServiceForm({ service, branchId, onSubmit, onCancel }: ServiceFo
       return;
     }
 
+    const priceNum = Number(price);
+    if (isNaN(priceNum) || priceNum < 0) {
+      toast.error('Ingrese un precio valido');
+      return;
+    }
+
     if (service) {
-      onSubmit({ id: service.id, name: name.trim(), price: Number(price) });
+      onSubmit({ id: service.id, name: name.trim(), price: priceNum });
       return;
     }
 
@@ -45,7 +51,7 @@ export function ServiceForm({ service, branchId, onSubmit, onCancel }: ServiceFo
       toast.error(`Ya existe un servicio con ese nombre: ${existing.name} ($${existing.price})`);
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 404) {
-        onSubmit({ name: name.trim(), price: Number(price) });
+        onSubmit({ name: name.trim(), price: priceNum });
       } else {
         toast.error(toErrorMessage(err));
       }

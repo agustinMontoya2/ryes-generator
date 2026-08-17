@@ -12,7 +12,8 @@ export default defineConfig({
     },
   },
 
-  //? que es esto?
+  // Proxy de desarrollo: redirige /api/* al backend en localhost:3000
+  // Esto es necesario solo en modo dev; en produccion el backend maneja CORS.
   server: {
     proxy: {
       '/api': {

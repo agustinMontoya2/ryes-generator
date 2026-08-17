@@ -72,7 +72,7 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
                     <div className="border-t pt-2">
                       <p className="font-medium text-sm mb-2">Servicios realizados:</p>
                       <div className="space-y-1">
-                        {order.services.map((service) => (
+                        {(order.services ?? []).map((service) => (
                           <div key={service.id} className="flex justify-between text-sm">
                             <span>{service.name}</span>
                             <span className="font-medium">{formatCurrency(service.price)}</span>
@@ -98,7 +98,10 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
           </div>
 
           <div className="border-t pt-4 text-center text-sm text-gray-500">
-            <p>Generado el {formatDateTime(new Date())}</p>
+            <p>
+              Generado el{' '}
+              {report.createdAt ? formatDateTime(report.createdAt) : 'Fecha desconocida'}
+            </p>
           </div>
         </div>
       </DialogContent>
