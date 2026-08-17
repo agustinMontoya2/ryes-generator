@@ -49,7 +49,7 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
 
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Órdenes incluidas:</h3>
-            {report.orders.map((order) => {
+            {(report.orders ?? []).map((order) => {
               const totalPrice = sumOrder(order);
 
               return (

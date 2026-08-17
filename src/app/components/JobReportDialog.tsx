@@ -12,7 +12,7 @@ import { formatCurrency } from '../utils/format';
 
 interface JobReportDialogProps {
   orders: Order[];
-  onSubmit: (orders: Order[], deliveryDate: string) => void;
+  onSubmit: (orderIds: string[], deliveryDate: string) => void;
   onCancel: () => void;
 }
 
@@ -27,7 +27,10 @@ export function JobReportDialog({ orders, onSubmit, onCancel }: JobReportDialogP
       toast.error('Por favor ingrese la fecha de entrega');
       return;
     }
-    onSubmit(orders, deliveryDate);
+    onSubmit(
+      orders.map((order) => order.id),
+      deliveryDate,
+    );
   };
 
   return (

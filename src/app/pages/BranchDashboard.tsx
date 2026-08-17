@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router';
+import { toast } from 'sonner';
 import type {
   Order,
   OrderInput,
+  OrderStatus,
   Dentist,
   DentistInput,
   Patient,
@@ -11,15 +13,30 @@ import type {
   ServiceInput,
   JobReport,
 } from '../types';
+import { toErrorMessage } from '../api/client';
 import {
-  mockOrders,
-  mockPatients,
-  mockDentists,
-  mockServices,
-  mockBranches,
-} from '../data/mockData';
-import { useCollection } from '../utils/useCollection';
-import { sumOrders } from '../utils/orders';
+  useBranches,
+  usePatients,
+  useDentists,
+  useServices,
+  useOrders,
+  useReports,
+  useCreatePatient,
+  useUpdatePatient,
+  useDeletePatient,
+  useCreateDentist,
+  useUpdateDentist,
+  useDeleteDentist,
+  useCreateService,
+  useUpdateService,
+  useDeleteService,
+  useCreateOrder,
+  useUpdateOrder,
+  useDeleteOrder,
+  useCompleteOrder,
+  useCreateReport,
+  useDeleteReport,
+} from '../hooks/queries';
 import { OrderList } from '../components/OrderList';
 import { OrderForm } from '../components/OrderForm';
 import { DentistList } from '../components/DentistList';
@@ -52,6 +69,7 @@ import {
   Briefcase,
   FileText,
   ArrowLeft,
+  Loader2,
 } from 'lucide-react';
 import {
   Select,
@@ -67,7 +85,8 @@ type DeleteTarget =
   | { type: 'order'; id: string }
   | { type: 'patient'; id: string }
   | { type: 'dentist'; id: string }
-  | { type: 'service'; id: string };
+  | { type: 'service'; id: string }
+  | { type: 'report'; id: string };
 
 const deleteMessages: Record<DeleteTarget['type'], { title: string; description: string }> = {
   order: {
@@ -87,20 +106,18 @@ const deleteMessages: Record<DeleteTarget['type'], { title: string; description:
     title: 'Eliminar servicio',
     description: '¿Está seguro que desea eliminar este servicio? Esta acción no se puede deshacer.',
   },
+  report: {
+    title: 'Eliminar remito',
+    description: '¿Está seguro que desea eliminar este remito? Esta acción no se puede deshacer.',
+  },
 };
 
 export function BranchDashboard() {
   const { id } = useParams<{ id: string }>();
-  const branch = mockBranches.find((r) => r.id === id);
-
-  const orders = useCollection<Order>(mockOrders);
-  const dentists = useCollection<Dentist>(mockDentists);
-  const patients = useCollection<Patient>(mockPatients);
-  const services = useCollection<Service>(mockServices);
-  const [reports, setReports] = useState<JobReport[]>([]);
+  const branchId = id ?? '';
 
   const [view, setView] = useState<View>('orders');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('all');
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
   const [showOrderForm, setShowOrderForm] = useState(false);
@@ -122,6 +139,48 @@ export function BranchDashboard() {
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
+  const { data: branches, isLoading: branchesLoading } = useBranches();
+  const { data: orders = [], isLoading: ordersLoading } = useOrders(branchId, filterStatus, {
+    enabled: view === 'orders',
+  });
+  const { data: patients = [] } = usePatients(branchId, { enabled: view === 'patients' });
+  const { data: dentists = [] } = useDentists(branchId, { enabled: view === 'dentists' });
+  const { data: services = [], isLoading: servicesLoading } = useServices(branchId, {
+    enabled: view === 'services' || showOrderForm,
+  });
+  const { data: reports = [], isLoading: reportsLoading } = useReports(branchId, {
+    enabled: view === 'reports',
+  });
+
+  const branch = branches?.find((b) => b.id === branchId);
+
+  const createPatientMutation = useCreatePatient();
+  const updatePatientMutation = useUpdatePatient();
+  const deletePatientMutation = useDeletePatient();
+  const createDentistMutation = useCreateDentist();
+  const updateDentistMutation = useUpdateDentist();
+  const deleteDentistMutation = useDeleteDentist();
+  const createServiceMutation = useCreateService();
+  const updateServiceMutation = useUpdateService();
+  const deleteServiceMutation = useDeleteService();
+  const createOrderMutation = useCreateOrder();
+  const updateOrderMutation = useUpdateOrder();
+  const deleteOrderMutation = useDeleteOrder();
+  const completeOrderMutation = useCompleteOrder();
+  const createReportMutation = useCreateReport();
+  const deleteReportMutation = useDeleteReport();
+
+  if (branchesLoading) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-500">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Cargando…</span>
+        </div>
+      </main>
+    );
+  }
+
   if (!branch) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -135,11 +194,6 @@ export function BranchDashboard() {
     );
   }
 
-  const filteredOrders = orders.items.filter((order) => {
-    if (filterStatus === 'all') return true;
-    return order.status === filterStatus;
-  });
-
   const handleCreateOrder = () => {
     setEditingOrder(null);
     setShowOrderForm(true);
@@ -150,23 +204,33 @@ export function BranchDashboard() {
     setShowOrderForm(true);
   };
 
-  const handleSubmitOrder = (orderData: OrderInput) => {
-    if (orderData.id) {
-      orders.update(orderData.id, orderData);
-    } else {
-      orders.add({ ...orderData, status: 'pending' }, true);
+  const handleSubmitOrder = async (orderData: OrderInput) => {
+    try {
+      const { id, ...dto } = orderData;
+      if (id) {
+        await updateOrderMutation.mutateAsync({ branchId, id, dto });
+        toast.success('Orden actualizada');
+      } else {
+        await createOrderMutation.mutateAsync({ branchId, dto });
+        toast.success('Orden creada');
+      }
+      setShowOrderForm(false);
+      setEditingOrder(null);
+    } catch (error) {
+      toast.error(toErrorMessage(error));
     }
-    setShowOrderForm(false);
-    setEditingOrder(null);
   };
-
-  const handleAddPatient = (patientData: PatientInput): Patient => patients.add(patientData);
-
-  const handleAddDentist = (dentistData: DentistInput): Dentist => dentists.add(dentistData);
 
   const handleDeleteOrder = (orderId: string) => setDeleteTarget({ type: 'order', id: orderId });
 
-  const handleCompleteOrder = (orderId: string) => orders.update(orderId, { status: 'completed' });
+  const handleCompleteOrder = async (orderId: string) => {
+    try {
+      await completeOrderMutation.mutateAsync({ branchId, id: orderId });
+      toast.success('Orden completada');
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    }
+  };
 
   const handleToggleSelectOrder = (orderId: string) => {
     setSelectedOrders((prev) =>
@@ -179,26 +243,16 @@ export function BranchDashboard() {
     setShowReportDialog(true);
   };
 
-  const handleGenerateReport = (selectedOrdersList: Order[], deliveryDate: string) => {
-    const totalPrice = sumOrders(selectedOrdersList);
-
-    const report: JobReport = {
-      id: crypto.randomUUID(),
-      orders: selectedOrdersList,
-      totalPrice,
-      deliveryDate,
-    };
-
-    orders.setItems((prev) =>
-      prev.map((o) =>
-        selectedOrdersList.some((so) => so.id === o.id) ? { ...o, status: 'submitted' } : o,
-      ),
-    );
-
-    setReports([report, ...reports]);
-    setSelectedOrders([]);
-    setCurrentReport(report);
-    setShowReportDialog(false);
+  const handleGenerateReport = async (orderIds: string[], deliveryDate: string) => {
+    try {
+      await createReportMutation.mutateAsync({ branchId, dto: { orderIds, deliveryDate } });
+      toast.success('Remito generado');
+      setSelectedOrders([]);
+      setShowReportDialog(false);
+      setView('reports');
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    }
   };
 
   const handleViewReport = (report: JobReport) => {
@@ -215,14 +269,21 @@ export function BranchDashboard() {
     setShowDentistForm(true);
   };
 
-  const handleSubmitDentist = (dentistData: DentistInput) => {
-    if (dentistData.id) {
-      dentists.update(dentistData.id, dentistData);
-    } else {
-      dentists.add(dentistData);
+  const handleSubmitDentist = async (dentistData: DentistInput) => {
+    try {
+      const { id, ...dto } = dentistData;
+      if (id) {
+        await updateDentistMutation.mutateAsync({ branchId, id, dto });
+        toast.success('Odontólogo actualizado');
+      } else {
+        await createDentistMutation.mutateAsync({ branchId, dto });
+        toast.success('Odontólogo creado');
+      }
+      setShowDentistForm(false);
+      setEditingDentist(null);
+    } catch (error) {
+      toast.error(toErrorMessage(error));
     }
-    setShowDentistForm(false);
-    setEditingDentist(null);
   };
 
   const handleDeleteDentist = (dentistId: string) =>
@@ -238,14 +299,25 @@ export function BranchDashboard() {
     setShowPatientForm(true);
   };
 
-  const handleSubmitPatient = (patientData: PatientInput) => {
-    if (patientData.id) {
-      patients.update(patientData.id, patientData);
-    } else {
-      patients.add(patientData);
+  const handleSubmitPatient = async (patientData: PatientInput) => {
+    try {
+      const { id, ...dto } = patientData;
+      if (id) {
+        await updatePatientMutation.mutateAsync({
+          branchId,
+          id,
+          dto,
+        });
+        toast.success('Paciente actualizado');
+      } else {
+        await createPatientMutation.mutateAsync({ branchId, dto });
+        toast.success('Paciente creado');
+      }
+      setShowPatientForm(false);
+      setEditingPatient(null);
+    } catch (error) {
+      toast.error(toErrorMessage(error));
     }
-    setShowPatientForm(false);
-    setEditingPatient(null);
   };
 
   const handleDeletePatient = (patientId: string) =>
@@ -261,33 +333,54 @@ export function BranchDashboard() {
     setShowServiceForm(true);
   };
 
-  const handleSubmitService = (serviceData: ServiceInput) => {
-    if (serviceData.id) {
-      services.update(serviceData.id, serviceData);
-    } else {
-      services.add(serviceData);
+  const handleSubmitService = async (serviceData: ServiceInput) => {
+    try {
+      const { id, ...dto } = serviceData;
+      if (id) {
+        await updateServiceMutation.mutateAsync({
+          branchId,
+          id,
+          dto,
+        });
+        toast.success('Servicio actualizado');
+      } else {
+        await createServiceMutation.mutateAsync({ branchId, dto });
+        toast.success('Servicio creado');
+      }
+      setShowServiceForm(false);
+      setEditingService(null);
+    } catch (error) {
+      toast.error(toErrorMessage(error));
     }
-    setShowServiceForm(false);
-    setEditingService(null);
   };
 
   const handleDeleteService = (serviceId: string) =>
     setDeleteTarget({ type: 'service', id: serviceId });
 
-  const handleConfirmDelete = () => {
+  const handleDeleteReport = (reportId: string) =>
+    setDeleteTarget({ type: 'report', id: reportId });
+
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     const { type, id: targetId } = deleteTarget;
-    if (type === 'order') {
-      orders.remove(targetId);
-      setSelectedOrders((prev) => prev.filter((oId) => oId !== targetId));
-    } else if (type === 'patient') {
-      patients.remove(targetId);
-    } else if (type === 'dentist') {
-      dentists.remove(targetId);
-    } else {
-      services.remove(targetId);
+
+    try {
+      if (type === 'order') {
+        await deleteOrderMutation.mutateAsync({ branchId, id: targetId });
+        setSelectedOrders((prev) => prev.filter((oId) => oId !== targetId));
+      } else if (type === 'patient') {
+        await deletePatientMutation.mutateAsync({ branchId, id: targetId });
+      } else if (type === 'dentist') {
+        await deleteDentistMutation.mutateAsync({ branchId, id: targetId });
+      } else if (type === 'service') {
+        await deleteServiceMutation.mutateAsync({ branchId, id: targetId });
+      } else {
+        await deleteReportMutation.mutateAsync({ branchId, id: targetId });
+      }
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(toErrorMessage(error));
     }
-    setDeleteTarget(null);
   };
 
   const activeDeleteMessage = deleteTarget ? deleteMessages[deleteTarget.type] : null;
@@ -333,7 +426,10 @@ export function BranchDashboard() {
           <TabsContent value="orders" className="space-y-4">
             <div className="flex gap-2">
               <div className="flex-1">
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <Select
+                  value={filterStatus}
+                  onValueChange={(v) => setFilterStatus(v as OrderStatus | 'all')}
+                >
                   <SelectTrigger>
                     <div className="flex items-center gap-2">
                       <Filter className="w-4 h-4" />
@@ -354,15 +450,22 @@ export function BranchDashboard() {
               </Button>
             </div>
 
-            <OrderList
-              orders={filteredOrders}
-              onEdit={handleEditOrder}
-              onDelete={handleDeleteOrder}
-              onComplete={handleCompleteOrder}
-              onRequestGenerateReport={handleRequestGenerateReport}
-              selectedOrders={selectedOrders}
-              onToggleSelect={handleToggleSelectOrder}
-            />
+            {ordersLoading && orders.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Cargando órdenes…</span>
+              </div>
+            ) : (
+              <OrderList
+                orders={orders}
+                onEdit={handleEditOrder}
+                onDelete={handleDeleteOrder}
+                onComplete={handleCompleteOrder}
+                onRequestGenerateReport={handleRequestGenerateReport}
+                selectedOrders={selectedOrders}
+                onToggleSelect={handleToggleSelectOrder}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="patients" className="space-y-4">
@@ -374,7 +477,7 @@ export function BranchDashboard() {
             </div>
 
             <PatientList
-              patients={patients.items}
+              patients={patients}
               onEdit={handleEditPatient}
               onDelete={handleDeletePatient}
             />
@@ -389,7 +492,7 @@ export function BranchDashboard() {
             </div>
 
             <DentistList
-              dentists={dentists.items}
+              dentists={dentists}
               onEdit={handleEditDentist}
               onDelete={handleDeleteDentist}
             />
@@ -404,14 +507,25 @@ export function BranchDashboard() {
             </div>
 
             <ServiceList
-              services={services.items}
+              services={services}
               onEdit={handleEditService}
               onDelete={handleDeleteService}
             />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">
-            <JobReportList reports={reports} onView={handleViewReport} />
+            {reportsLoading && reports.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Cargando remitos…</span>
+              </div>
+            ) : (
+              <JobReportList
+                reports={reports}
+                onView={handleViewReport}
+                onDelete={handleDeleteReport}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -419,12 +533,10 @@ export function BranchDashboard() {
       {showOrderForm && (
         <OrderForm
           order={editingOrder}
-          patients={patients.items}
-          dentists={dentists.items}
-          services={services.items}
+          branchId={branchId}
+          services={services}
+          servicesLoading={servicesLoading}
           onSubmit={handleSubmitOrder}
-          onAddPatient={handleAddPatient}
-          onAddDentist={handleAddDentist}
           onCancel={() => {
             setShowOrderForm(false);
             setEditingOrder(null);
@@ -435,6 +547,7 @@ export function BranchDashboard() {
       {showPatientForm && (
         <PatientForm
           patient={editingPatient}
+          branchId={branchId}
           onSubmit={handleSubmitPatient}
           onCancel={() => {
             setShowPatientForm(false);
@@ -446,6 +559,7 @@ export function BranchDashboard() {
       {showDentistForm && (
         <DentistForm
           dentist={editingDentist}
+          branchId={branchId}
           onSubmit={handleSubmitDentist}
           onCancel={() => {
             setShowDentistForm(false);
@@ -457,6 +571,7 @@ export function BranchDashboard() {
       {showServiceForm && (
         <ServiceForm
           service={editingService}
+          branchId={branchId}
           onSubmit={handleSubmitService}
           onCancel={() => {
             setShowServiceForm(false);

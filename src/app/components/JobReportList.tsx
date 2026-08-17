@@ -1,15 +1,16 @@
 import type { JobReport } from '../types';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Eye, FileText } from 'lucide-react';
+import { Eye, FileText, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/format';
 
 interface JobReportListProps {
   reports: JobReport[];
   onView: (report: JobReport) => void;
+  onDelete: (reportId: string) => void;
 }
 
-export function JobReportList({ reports, onView }: JobReportListProps) {
+export function JobReportList({ reports, onView, onDelete }: JobReportListProps) {
   if (reports.length === 0) {
     return (
       <Card className="p-8 text-center">
@@ -39,7 +40,7 @@ export function JobReportList({ reports, onView }: JobReportListProps) {
                   {formatDate(report.deliveryDate)}
                 </p>
                 <p className="text-gray-600">
-                  <span className="font-medium">Órdenes:</span> {report.orders.length}
+                  <span className="font-medium">Órdenes:</span> {(report.orders ?? []).length}
                 </p>
                 <p className="text-gray-900 font-semibold">
                   Total: {formatCurrency(report.totalPrice)}
@@ -47,7 +48,7 @@ export function JobReportList({ reports, onView }: JobReportListProps) {
               </div>
 
               <div className="mt-2 flex flex-wrap gap-1">
-                {report.orders.map((order) => (
+                {(report.orders ?? []).map((order) => (
                   <span key={order.id} className="text-xs bg-gray-100 px-2 py-1 rounded">
                     {order.patient.fullname}
                   </span>
@@ -55,14 +56,24 @@ export function JobReportList({ reports, onView }: JobReportListProps) {
               </div>
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Ver remito"
-              onClick={() => onView(report)}
-            >
-              <Eye className="w-4 h-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Ver remito"
+                onClick={() => onView(report)}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Eliminar remito"
+                onClick={() => onDelete(report.id)}
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </Button>
+            </div>
           </div>
         </Card>
       ))}
