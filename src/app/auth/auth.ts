@@ -1,54 +1,60 @@
-import type { LoginResponse, User } from '../types';
+import type { UserProfile } from '../types';
 import { BRAND_SLUG } from '../config/brand';
+import { getCurrentUser, login as apiLogin, register as apiRegister } from '../api/mock';
 
-const TOKEN_KEY = `${BRAND_SLUG}_token`;
-const USER_KEY = `${BRAND_SLUG}_user`;
+const TOKEN_KEY = `${BRAND_SLUG}_access_token`;
+const REFRESH_KEY = `${BRAND_SLUG}_refresh_token`;
+const PROFILE_KEY = `${BRAND_SLUG}_profile`;
 
 export const DEMO_EMAIL = `operador@${BRAND_SLUG}.com`;
 export const DEMO_PASSWORD = `${BRAND_SLUG}2026`;
+export const ADMIN_EMAIL = `admin@${BRAND_SLUG}.com`;
+export const ADMIN_PASSWORD = `admin2026`;
 
-const DEMO_USER: User = {
-  id: `u-${BRAND_SLUG}-1`,
-  email: DEMO_EMAIL,
-};
-
-export async function login(email: string, password: string): Promise<LoginResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
-  if (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
-    throw new Error('Credenciales inválidas');
-  }
-
-  const accessToken = btoa(
-    JSON.stringify({
-      sub: DEMO_USER.id,
-      email: DEMO_USER.email,
-      exp: Date.now() + 8 * 60 * 60 * 1000,
-    }),
-  );
-
-  return { accessToken, user: DEMO_USER };
+export interface Session {
+  accessToken: string;
+  refreshToken: string;
+  profile: UserProfile;
 }
 
-export function getSession(): LoginResponse | null {
-  const accessToken = localStorage.getItem(TOKEN_KEY);
-  const rawUser = localStorage.getItem(USER_KEY);
+export async function login(credential: string, password: string): Promise<Session> {
+  const tokens = await apiLogin({ credential, password });
+  const profile = await getCurrentUser(tokens.accessToken);
 
-  if (!accessToken || !rawUser) return null;
+  return { ...tokens, profile };
+}
+
+export async function register(input: {
+  email: string;
+  username: string;
+  password: string;
+}): Promise<Session> {
+  await apiRegister(input);
+  return login(input.email, input.password);
+}
+
+export function getSession(): Session | null {
+  const accessToken = localStorage.getItem(TOKEN_KEY);
+  const refreshToken = localStorage.getItem(REFRESH_KEY);
+  const rawProfile = localStorage.getItem(PROFILE_KEY);
+
+  if (!accessToken || !refreshToken || !rawProfile) return null;
 
   try {
-    return { accessToken, user: JSON.parse(rawUser) as User };
+    return { accessToken, refreshToken, profile: JSON.parse(rawProfile) as UserProfile };
   } catch {
     return null;
   }
 }
 
-export function saveSession(session: LoginResponse) {
+export function saveSession(session: Session) {
   localStorage.setItem(TOKEN_KEY, session.accessToken);
-  localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+  localStorage.setItem(REFRESH_KEY, session.refreshToken);
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(session.profile));
 }
 
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem(PROFILE_KEY);
 }

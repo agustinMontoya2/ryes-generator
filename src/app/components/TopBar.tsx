@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router';
-import { ArrowLeft, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { ArrowLeft, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { BRAND_NAME } from '../config/brand';
 import { Button } from './ui/button';
@@ -12,7 +12,10 @@ interface TopBarProps {
 
 export function TopBar({ showBack = false, subtitle }: TopBarProps) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { pathname } = useLocation();
+  const { user, logout } = useAuth();
+
+  const isAdminPage = pathname === '/admin';
 
   return (
     <header className="flex items-center gap-2.5">
@@ -35,6 +38,14 @@ export function TopBar({ showBack = false, subtitle }: TopBarProps) {
         {subtitle && <p className="text-[12.5px] text-muted-foreground truncate">{subtitle}</p>}
       </div>
       <div className="flex-1" />
+      {user?.isSuperAdmin && !isAdminPage && (
+        <Button variant="ghost" size="sm" asChild className="text-primary">
+          <Link to="/admin">
+            <Shield className="size-4" />
+            <span className="hidden sm:inline">Panel superadmin</span>
+          </Link>
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"

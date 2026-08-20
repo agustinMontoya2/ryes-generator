@@ -1,18 +1,36 @@
 export type OrderStatus = 'pending' | 'completed' | 'submitted';
 
-export interface User {
+export interface Branch {
+  id: string;
+  location: string;
+}
+
+export interface UserProfile {
   id: string;
   email: string;
+  username: string;
+  isSuperAdmin: boolean;
+}
+
+export interface User extends UserProfile {
+  branches?: Branch[];
 }
 
 export interface LoginResponse {
   accessToken: string;
-  user: User;
+  refreshToken: string;
 }
 
-export interface Branch {
-  id: string;
-  location: string;
+export interface Pagination {
+  totalItems: number;
+  limit: number;
+  currentPage: number;
+  pages: number;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  pagination: Pagination;
 }
 
 export interface Patient {
