@@ -1,5 +1,4 @@
 import type { JobReport } from '../types';
-import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Eye, FileText, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/format';
@@ -13,69 +12,80 @@ interface JobReportListProps {
 export function JobReportList({ reports, onView, onDelete }: JobReportListProps) {
   if (reports.length === 0) {
     return (
-      <Card className="p-8 text-center">
-        <FileText className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-        <p className="text-gray-500">No hay remitos generados</p>
-        <p className="text-sm text-gray-400 mt-2">
-          Los remitos aparecerán aquí cuando generes uno desde la vista de órdenes
+      <div className="rounded-[16px] border-[1.5px] border-dashed border-border bg-card p-8 text-center">
+        <div className="mx-auto mb-3 flex size-[58px] items-center justify-center rounded-[17px] bg-muted text-muted-foreground">
+          <FileText className="size-6" />
+        </div>
+        <h4 className="font-display text-[15px] font-bold">No hay remitos</h4>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Los remitos aparecerán aquí cuando generes uno desde la vista de trabajos.
         </p>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {reports.map((report) => (
-        <Card key={report.id} className="p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold">Remito #{report.id.slice(-6)}</h3>
+        <div
+          key={report.id}
+          className="rounded-[16px] border border-border bg-card p-4 shadow-[0_1px_2px_oklch(22%_0.02_250/0.04),0_2px_8px_oklch(22%_0.02_250/0.05)]"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 items-center justify-center rounded-[11px] bg-muted text-muted-foreground">
+                <FileText className="size-4.5" />
               </div>
-
-              <div className="space-y-1 text-sm">
-                <p className="text-gray-600">
-                  <span className="font-medium">Fecha de entrega:</span>{' '}
-                  {formatDate(report.deliveryDate)}
+              <div>
+                <h3 className="font-display text-[14.5px] font-bold">
+                  Remito #{report.id.slice(-6)}
+                </h3>
+                <p className="text-[12.5px] text-muted-foreground">
+                  Entrega: {formatDate(report.deliveryDate)} · {(report.orders ?? []).length}{' '}
+                  trabajos
                 </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">Órdenes:</span> {(report.orders ?? []).length}
-                </p>
-                <p className="text-gray-900 font-semibold">
-                  Total: {formatCurrency(report.totalPrice)}
-                </p>
-              </div>
-
-              <div className="mt-2 flex flex-wrap gap-1">
-                {(report.orders ?? []).map((order) => (
-                  <span key={order.id} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {order.patient.fullname}
-                  </span>
-                ))}
               </div>
             </div>
-
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-1.5">
               <Button
                 variant="outline"
-                size="icon"
-                aria-label="Ver remito"
+                size="sm"
+                aria-label={`Ver remito ${report.id.slice(-6)}`}
                 onClick={() => onView(report)}
               >
-                <Eye className="w-4 h-4" />
+                <Eye className="size-4" />
+                Ver remito
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                aria-label="Eliminar remito"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Eliminar remito ${report.id.slice(-6)}`}
                 onClick={() => onDelete(report.id)}
               >
-                <Trash2 className="w-4 h-4 text-red-600" />
+                <Trash2 className="size-4" />
               </Button>
             </div>
           </div>
-        </Card>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(report.orders ?? []).map((order) => (
+              <span
+                key={order.id}
+                className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[12px] font-semibold text-foreground"
+              >
+                {order.patient.fullname}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+            <span className="text-[12.5px] font-semibold text-muted-foreground">Total</span>
+            <span className="font-display text-[15px] font-bold">
+              {formatCurrency(report.totalPrice)}
+            </span>
+          </div>
+        </div>
       ))}
     </div>
   );

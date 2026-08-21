@@ -48,8 +48,11 @@ import { ServiceForm } from '../components/ServiceForm';
 import { JobReportList } from '../components/JobReportList';
 import { JobReportView } from '../components/JobReportView';
 import { JobReportDialog } from '../components/JobReportDialog';
+import { AppShell } from '../components/AppShell';
+import { TopBar } from '../components/TopBar';
+import { TabBar } from '../components/TabBar';
+import { PageHero } from '../components/PageHero';
 import { Button } from '../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,14 +65,14 @@ import {
 } from '../components/ui/alert-dialog';
 import {
   Plus,
-  ClipboardList,
   Users,
-  Filter,
   UserCheck,
   Briefcase,
   FileText,
+  ClipboardList,
   ArrowLeft,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import {
   Select,
@@ -140,7 +143,7 @@ export function BranchDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const { data: branches, isLoading: branchesLoading } = useBranches();
-  const { data: orders = [], isLoading: ordersLoading } = useOrders(branchId, filterStatus, {
+  const { data: orders = [], isLoading: ordersLoading } = useOrders(branchId, 'all', {
     enabled: view === 'orders',
   });
   const { data: patients = [] } = usePatients(branchId, { enabled: view === 'patients' });
@@ -170,11 +173,20 @@ export function BranchDashboard() {
   const createReportMutation = useCreateReport();
   const deleteReportMutation = useDeleteReport();
 
+  const filteredOrders = orders.filter((order) => {
+    if (filterStatus === 'all') return true;
+    return order.status === filterStatus;
+  });
+
+  const pendingCount = orders.filter((o) => o.status === 'pending').length;
+  const completedCount = orders.filter((o) => o.status === 'completed').length;
+  const submittedCount = orders.filter((o) => o.status === 'submitted').length;
+
   if (branchesLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-gray-500">
-          <Loader2 className="w-5 h-5 animate-spin" />
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
           <span>Cargando…</span>
         </div>
       </main>
@@ -183,14 +195,23 @@ export function BranchDashboard() {
 
   if (!branch) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Laboratorio no encontrado</h2>
-          <Link to="/">
-            <Button>Volver al listado</Button>
-          </Link>
+      <AppShell className="flex flex-col items-center justify-center gap-4 text-center">
+        <div className="flex size-[58px] items-center justify-center rounded-[17px] bg-muted text-muted-foreground">
+          <FileText className="size-6" />
         </div>
-      </main>
+        <div>
+          <h2 className="font-display text-[15px] font-bold">Laboratorio no encontrado</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            La sucursal no existe o fue eliminada.
+          </p>
+        </div>
+        <Link to="/">
+          <Button>
+            <ArrowLeft className="size-4" />
+            Volver al listado
+          </Button>
+        </Link>
+      </AppShell>
     );
   }
 
@@ -390,79 +411,56 @@ export function BranchDashboard() {
 
   const activeDeleteMessage = deleteTarget ? deleteMessages[deleteTarget.type] : null;
 
+  const tabs = [
+    { value: 'orders', label: 'Trabajos', icon: ClipboardList },
+    { value: 'patients', label: 'Pacientes', icon: UserCheck },
+    { value: 'dentists', label: 'Odontólogos', icon: Users },
+    { value: 'services', label: 'Servicios', icon: Briefcase },
+    { value: 'reports', label: 'Remitos', icon: FileText },
+  ];
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-4 pb-20">
-        <header className="mb-6">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="mb-3">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a sucursales
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold mb-1">{branch.location}</h1>
-          <p className="text-gray-600">Gestión de Órdenes</p>
-        </header>
+    <>
+      <AppShell className="flex flex-col gap-7">
+        <TopBar showBack subtitle={branch.location} />
 
-        <Tabs value={view} onValueChange={(v) => setView(v as View)} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5 h-auto">
-            <TabsTrigger value="orders" className="flex flex-col items-center gap-1 py-2">
-              <ClipboardList className="w-4 h-4" />
-              <span className="text-xs">Órdenes</span>
-            </TabsTrigger>
-            <TabsTrigger value="patients" className="flex flex-col items-center gap-1 py-2">
-              <UserCheck className="w-4 h-4" />
-              <span className="text-xs">Pacientes</span>
-            </TabsTrigger>
-            <TabsTrigger value="dentists" className="flex flex-col items-center gap-1 py-2">
-              <Users className="w-4 h-4" />
-              <span className="text-xs">Odontólogos</span>
-            </TabsTrigger>
-            <TabsTrigger value="services" className="flex flex-col items-center gap-1 py-2">
-              <Briefcase className="w-4 h-4" />
-              <span className="text-xs">Servicios</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex flex-col items-center gap-1 py-2">
-              <FileText className="w-4 h-4" />
-              <span className="text-xs">Remitos</span>
-            </TabsTrigger>
-          </TabsList>
+        {view === 'orders' && (
+          <section className="space-y-5">
+            <PageHero
+              eyebrow="Gestión de trabajos"
+              title="Trabajos"
+              subtitle={`${pendingCount} pendientes · ${completedCount} completadas · ${submittedCount} entregadas`}
+              action={
+                <Button onClick={handleCreateOrder}>
+                  <Plus className="size-4" />
+                  Nuevo Trabajo
+                </Button>
+              }
+            />
 
-          <TabsContent value="orders" className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Select
-                  value={filterStatus}
-                  onValueChange={(v) => setFilterStatus(v as OrderStatus | 'all')}
-                >
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-4 h-4" />
-                      <SelectValue />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las órdenes</SelectItem>
-                    <SelectItem value="pending">Pendientes</SelectItem>
-                    <SelectItem value="completed">Completadas</SelectItem>
-                    <SelectItem value="submitted">Entregadas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleCreateOrder}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva Orden
-              </Button>
-            </div>
+            <Select
+              value={filterStatus}
+              onValueChange={(v) => setFilterStatus(v as OrderStatus | 'all')}
+            >
+              <SelectTrigger aria-label="Filtrar por estado">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos ({orders.length})</SelectItem>
+                <SelectItem value="pending">Pendientes ({pendingCount})</SelectItem>
+                <SelectItem value="completed">Completadas ({completedCount})</SelectItem>
+                <SelectItem value="submitted">Entregadas ({submittedCount})</SelectItem>
+              </SelectContent>
+            </Select>
 
             {ordersLoading && orders.length === 0 ? (
-              <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Cargando órdenes…</span>
+              <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+                <Loader2 className="size-5 animate-spin" />
+                <span>Cargando trabajos…</span>
               </div>
             ) : (
               <OrderList
-                orders={orders}
+                orders={filteredOrders}
                 onEdit={handleEditOrder}
                 onDelete={handleDeleteOrder}
                 onComplete={handleCompleteOrder}
@@ -471,57 +469,82 @@ export function BranchDashboard() {
                 onToggleSelect={handleToggleSelectOrder}
               />
             )}
-          </TabsContent>
+          </section>
+        )}
 
-          <TabsContent value="patients" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={handleCreatePatient}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nuevo Paciente
-              </Button>
-            </div>
-
+        {view === 'patients' && (
+          <section className="space-y-5">
+            <PageHero
+              eyebrow="Agenda del laboratorio"
+              title="Pacientes"
+              subtitle={`${patients.length} pacientes registrados`}
+              action={
+                <Button onClick={handleCreatePatient}>
+                  <Plus className="size-4" />
+                  Nuevo Paciente
+                </Button>
+              }
+            />
             <PatientList
               patients={patients}
               onEdit={handleEditPatient}
               onDelete={handleDeletePatient}
             />
-          </TabsContent>
+          </section>
+        )}
 
-          <TabsContent value="dentists" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={handleCreateDentist}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nuevo Odontólogo
-              </Button>
-            </div>
-
+        {view === 'dentists' && (
+          <section className="space-y-5">
+            <PageHero
+              eyebrow="Profesionales"
+              title="Odontólogos"
+              subtitle={`${dentists.length} profesionales registrados`}
+              action={
+                <Button onClick={handleCreateDentist}>
+                  <Plus className="size-4" />
+                  Nuevo Odontólogo
+                </Button>
+              }
+            />
             <DentistList
               dentists={dentists}
               onEdit={handleEditDentist}
               onDelete={handleDeleteDentist}
             />
-          </TabsContent>
+          </section>
+        )}
 
-          <TabsContent value="services" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={handleCreateService}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nuevo Servicio
-              </Button>
-            </div>
-
+        {view === 'services' && (
+          <section className="space-y-5">
+            <PageHero
+              eyebrow="Precios del laboratorio"
+              title="Servicios"
+              subtitle={`${services.length} servicios de lista`}
+              action={
+                <Button onClick={handleCreateService}>
+                  <Plus className="size-4" />
+                  Nuevo Servicio
+                </Button>
+              }
+            />
             <ServiceList
               services={services}
               onEdit={handleEditService}
               onDelete={handleDeleteService}
             />
-          </TabsContent>
+          </section>
+        )}
 
-          <TabsContent value="reports" className="space-y-4">
+        {view === 'reports' && (
+          <section className="space-y-5">
+            <PageHero
+              eyebrow="Entregas realizadas"
+              title="Remitos"
+              subtitle={`${reports.length} remitos generados`}
+            />
             {reportsLoading && reports.length === 0 ? (
-              <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
-                <Loader2 className="w-5 h-5 animate-spin" />
+              <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+                <Loader2 className="size-5 animate-spin" />
                 <span>Cargando remitos…</span>
               </div>
             ) : (
@@ -531,9 +554,11 @@ export function BranchDashboard() {
                 onDelete={handleDeleteReport}
               />
             )}
-          </TabsContent>
-        </Tabs>
-      </div>
+          </section>
+        )}
+      </AppShell>
+
+      <TabBar tabs={tabs} value={view} onChange={(v) => setView(v as View)} />
 
       {showOrderForm && (
         <OrderForm
@@ -606,7 +631,12 @@ export function BranchDashboard() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{activeDeleteMessage?.title}</AlertDialogTitle>
+            <div className="flex size-[42px] items-center justify-center rounded-[13px] bg-[oklch(94%_0.04_25)] text-destructive">
+              <Trash2 className="size-5" />
+            </div>
+            <AlertDialogTitle className="mt-1 text-lg">
+              {activeDeleteMessage?.title}
+            </AlertDialogTitle>
             <AlertDialogDescription>{activeDeleteMessage?.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -620,6 +650,6 @@ export function BranchDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </main>
+    </>
   );
 }

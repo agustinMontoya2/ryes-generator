@@ -11,6 +11,8 @@ export interface ErrorEnvelope {
   statusCode: number;
   errorCode?: string;
   message: string;
+  identifier?: string;
+  property?: string;
   details?: unknown;
   metadata?: unknown;
 }

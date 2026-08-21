@@ -8,6 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Users } from 'lucide-react';
 
 interface DentistFormProps {
   dentist?: Dentist | null;
@@ -170,9 +171,23 @@ export function DentistForm({ dentist, branchId, onSubmit, onCancel }: DentistFo
 
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle>{dentist ? 'Editar Odontólogo' : 'Nuevo Odontólogo'}</DialogTitle>
+          <div className="flex items-start gap-3">
+            <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-accent text-accent-foreground">
+              <Users className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg">
+                {dentist ? 'Editar Odontólogo' : 'Nuevo Odontólogo'}
+              </DialogTitle>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {dentist
+                  ? 'Actualizá los datos del profesional.'
+                  : 'Sumá un nuevo profesional al laboratorio.'}
+              </p>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

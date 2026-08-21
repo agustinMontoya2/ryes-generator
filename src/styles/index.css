@@ -6,18 +6,32 @@
     background: #fff !important;
   }
 
-  body * {
-    visibility: hidden;
+  #root,
+  [data-slot='dialog-overlay'],
+  [data-sonner-toaster] {
+    display: none !important;
   }
 
-  #remito-content,
-  #remito-content * {
-    visibility: visible;
+  [data-slot='dialog-content'] {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 24px !important;
   }
 
-  #remito-content {
-    position: absolute;
-    inset: 0;
-    margin: 0;
+  /* Botón de cerrar del diálogo */
+  [data-slot='dialog-content'] > button {
+    display: none !important;
+  }
+
+  .no-print {
+    display: none !important;
   }
 }

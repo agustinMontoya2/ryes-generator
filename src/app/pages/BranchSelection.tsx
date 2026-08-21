@@ -1,69 +1,64 @@
 import { Link } from 'react-router';
 import { useBranches } from '../hooks/queries';
-import { useAuth } from '../auth/AuthContext';
-import { BRAND_NAME } from '../config/brand';
 import { toErrorMessage } from '../api/client';
-import { Card } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { MapPin, ChevronRight, LogOut, Loader2 } from 'lucide-react';
+import { AppShell } from '../components/AppShell';
+import { TopBar } from '../components/TopBar';
+import { PageHero } from '../components/PageHero';
+import { ChevronRight, Loader2, MapPin, Store } from 'lucide-react';
 
 export function BranchSelection() {
-  const { logout } = useAuth();
   const { data: branches = [], isLoading, error } = useBranches();
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto p-4 pb-20">
-        <div className="relative">
-          <Button variant="ghost" size="sm" onClick={logout} className="absolute right-0 top-0">
-            <LogOut className="w-4 h-4 mr-2" />
-            Cerrar sesión
-          </Button>
-        </div>
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">{BRAND_NAME}</h1>
-          <p className="text-gray-600">Selecciona una sucursal para gestionar</p>
-        </header>
+    <AppShell className="flex flex-col gap-7">
+      <TopBar />
 
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span>Cargando sucursales…</span>
+      <PageHero
+        eyebrow="Sucursales"
+        title="Elegí la sucursal a gestionar"
+        subtitle="Seleccioná el laboratorio desde el que querés operar."
+      />
+
+      {isLoading ? (
+        <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
+          <span>Cargando sucursales…</span>
+        </div>
+      ) : error ? (
+        <div className="rounded-[16px] border-[1.5px] border-dashed border-destructive/40 bg-card p-8 text-center">
+          <p className="text-sm text-destructive">{toErrorMessage(error)}</p>
+          <p className="mt-1 text-[12.5px] text-muted-foreground">Reintentá en unos segundos.</p>
+        </div>
+      ) : branches.length === 0 ? (
+        <div className="rounded-[16px] border-[1.5px] border-dashed border-border bg-card p-8 text-center">
+          <div className="mx-auto mb-3 flex size-[58px] items-center justify-center rounded-[17px] bg-muted text-muted-foreground">
+            <Store className="size-6" />
           </div>
-        ) : error ? (
-          <Card className="p-8 text-center">
-            <p className="text-destructive">{toErrorMessage(error)}</p>
-          </Card>
-        ) : branches.length === 0 ? (
-          <Card className="p-8 text-center">
-            <MapPin className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <p className="text-gray-500">No hay sucursales disponibles</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Comunicate con el administrador para dar de alta una sucursal
-            </p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {branches.map((branch) => (
-              <Link key={branch.id} to={`/branches/${branch.id}`}>
-                <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <MapPin className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h2 className="font-semibold text-lg">{branch.location}</h2>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </main>
+          <h4 className="font-display text-[15px] font-bold">No hay sucursales</h4>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Comunicate con el administrador para dar de alta una sucursal.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {branches.map((branch) => (
+            <Link
+              key={branch.id}
+              to={`/branches/${branch.id}`}
+              className="group flex items-center gap-3.5 rounded-[16px] border border-border bg-card p-3.5 shadow-[0_1px_2px_oklch(22%_0.02_250/0.04),0_2px_8px_oklch(22%_0.02_250/0.05)] transition-all hover:-translate-y-px hover:border-border hover:shadow-[0_2px_4px_oklch(22%_0.02_250/0.05),0_12px_28px_oklch(22%_0.02_250/0.09)]"
+            >
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-accent text-accent-foreground">
+                <MapPin className="size-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-[15px] font-bold">{branch.location}</p>
+                <p className="text-[12.5px] text-muted-foreground">Sucursal</p>
+              </div>
+              <ChevronRight className="size-5 text-muted-foreground" />
+            </Link>
+          ))}
+        </div>
+      )}
+    </AppShell>
   );
 }

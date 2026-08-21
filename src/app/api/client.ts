@@ -1,6 +1,7 @@
-import { TOKEN_KEY } from '../config/brand';
-import { clearSession } from '../auth/auth';
+import { PROFILE_KEY, REFRESH_TOKEN_KEY, TOKEN_KEY, USER_KEY } from '../config/brand';
 import type { Envelope, ErrorEnvelope } from './types';
+import type { LoginResponse } from '../types';
+import { translateApiError } from '../utils/error-messages';
 
 const DEFAULT_TIMEOUT = Number(import.meta.env.VITE_REQUEST_TIMEOUT) || 15_000;
 
@@ -9,6 +10,8 @@ export const API_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
 export class ApiError extends Error {
   readonly statusCode: number;
   readonly errorCode?: string;
+  readonly identifier?: string;
+  readonly property?: string;
   readonly details?: unknown;
   readonly metadata?: unknown;
 
@@ -17,23 +20,66 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.statusCode = envelope.statusCode;
     this.errorCode = envelope.errorCode;
+    this.identifier = envelope.identifier;
+    this.property = envelope.property;
     this.details = envelope.details;
     this.metadata = envelope.metadata;
   }
 }
 
 export function toErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  if (error instanceof Error) return error.message;
+  if (error instanceof ApiError) return translateApiError(error);
+  if (error instanceof Error) return translateApiError(error);
   return 'Ocurrió un error inesperado';
+}
+
+function clearSessionStorage() {
+  for (const key of [TOKEN_KEY, REFRESH_TOKEN_KEY, PROFILE_KEY, USER_KEY]) {
+    localStorage.removeItem(key);
+  }
+}
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function requestNewAccessToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return null;
+
+  refreshInFlight ??= (async () => {
+    try {
+      const url = new URL(`${API_URL}/auth/refresh`, window.location.origin);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) return null;
+
+      const json = (await response.json()) as { payload?: LoginResponse } | null;
+      const tokens = json?.payload;
+      if (!tokens?.accessToken || !tokens?.refreshToken) return null;
+
+      localStorage.setItem(TOKEN_KEY, tokens.accessToken);
+      localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+      return tokens.accessToken;
+    } catch {
+      return null;
+    }
+  })();
+
+  return refreshInFlight.finally(() => {
+    refreshInFlight = null;
+  });
 }
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
   branchId?: string;
-  query?: Record<string, string | number | undefined>;
+  query?: Record<string, string | number | boolean | undefined>;
   timeout?: number;
+  skipAuthRetry?: boolean;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -56,6 +102,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
   if (branchId) headers.set('x-branch-id', branchId);
   const token = localStorage.getItem(TOKEN_KEY);
+  const hadToken = Boolean(token);
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const controller = new AbortController();
@@ -90,14 +137,39 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      clearSession();
+    const raw = (json ?? {}) as Record<string, unknown>;
+    const errorEnvelope: ErrorEnvelope = {
+      statusCode: typeof raw.statusCode === 'number' ? raw.statusCode : response.status,
+      errorCode:
+        typeof raw.errorCode === 'string'
+          ? raw.errorCode
+          : typeof raw.code === 'string'
+            ? raw.code
+            : undefined,
+      message: typeof raw.message === 'string' ? raw.message : `Error ${response.status}`,
+      identifier: typeof raw.identifier === 'string' ? raw.identifier : undefined,
+      property: typeof raw.property === 'string' ? raw.property : undefined,
+      details: raw.details,
+      metadata: raw.metadata,
+    };
+
+    const isPermissionError = errorEnvelope.errorCode === 'USER_NOT_ADMIN';
+
+    if (
+      response.status === 401 &&
+      hadToken &&
+      !path.startsWith('/auth/') &&
+      !isPermissionError &&
+      !options.skipAuthRetry
+    ) {
+      const newToken = await requestNewAccessToken();
+      if (newToken) {
+        return request<T>(path, { ...options, skipAuthRetry: true });
+      }
+      clearSessionStorage();
       window.location.href = '/login';
     }
-    const errorEnvelope: ErrorEnvelope = (json as ErrorEnvelope) ?? {
-      statusCode: response.status,
-      message: `Error ${response.status}`,
-    };
+
     throw new ApiError(errorEnvelope);
   }
 
