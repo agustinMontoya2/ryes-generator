@@ -46,7 +46,9 @@ export function PatientList({ patients, onEdit, onDelete }: PatientListProps) {
             </div>
             <div className="min-w-0">
               <h3 className="truncate font-display text-[15px] font-bold">{patient.fullname}</h3>
-              <p className="text-[12.5px] text-muted-foreground">DNI: {patient.dni}</p>
+              <p className="text-[12.5px] text-muted-foreground">
+                {patient.dni != null ? `DNI: ${patient.dni}` : 'Sin DNI'}
+              </p>
             </div>
           </div>
           <div className="flex shrink-0 gap-1.5">

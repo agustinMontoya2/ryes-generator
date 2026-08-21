@@ -92,8 +92,8 @@ export function JobReportView({ report, onClose }: JobReportViewProps) {
                           {order.patient.fullname}
                         </h5>
                         <p className="text-[12.5px] text-muted-foreground">
-                          DNI: {order.patient.dni} · Dr. {order.dentist.name}{' '}
-                          {order.dentist.lastname}
+                          {order.patient.dni != null ? `DNI: ${order.patient.dni}` : 'Sin DNI'} ·
+                          Dr. {order.dentist.name} {order.dentist.lastname}
                         </p>
                       </div>
                       <div className="text-right">

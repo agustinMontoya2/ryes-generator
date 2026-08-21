@@ -455,6 +455,7 @@ export function BranchDashboard() {
       {showPatientForm && (
         <PatientForm
           patient={editingPatient}
+          patients={patients.items}
           onSubmit={handleSubmitPatient}
           onCancel={() => {
             setShowPatientForm(false);

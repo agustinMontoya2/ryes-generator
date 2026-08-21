@@ -86,7 +86,9 @@ export function OrderList({
                   </h3>
                   <StatusBadge status={order.status} />
                 </div>
-                <p className="text-sm text-muted-foreground">DNI: {order.patient.dni}</p>
+                <p className="text-sm text-muted-foreground">
+                  {order.patient.dni != null ? `DNI: ${order.patient.dni}` : 'Sin DNI'}
+                </p>
               </div>
               {isCompleted ? (
                 <Checkbox

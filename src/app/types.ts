@@ -36,7 +36,7 @@ export interface Paginated<T> {
 export interface Patient {
   id: string;
   fullname: string;
-  dni: number;
+  dni?: number;
 }
 
 export interface Dentist {

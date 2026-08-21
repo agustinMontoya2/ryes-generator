@@ -12,6 +12,7 @@ export const mockPatients: Patient[] = [
   { id: '3', fullname: 'Ana Martínez', dni: 42987654 },
   { id: '4', fullname: 'Carlos López', dni: 31234567 },
   { id: '5', fullname: 'Laura Fernández', dni: 39876543 },
+  { id: '6', fullname: 'Juan Pérez' },
 ];
 
 export const mockDentists: Dentist[] = [

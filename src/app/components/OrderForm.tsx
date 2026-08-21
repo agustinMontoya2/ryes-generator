@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { toast } from 'sonner';
 import type {
@@ -18,6 +18,14 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ClipboardList } from 'lucide-react';
 import { sumServices } from '../utils/orders';
 import { formatCurrency } from '../utils/format';
+import {
+  findNameOnlyPatient,
+  findPatientByDni,
+  findPatientByDniOnly,
+  findPatientsByName,
+  hasExactNamePatient,
+  resolvePatient,
+} from '../utils/patients';
 import { cn } from './ui/utils';
 
 interface OrderFormProps {
@@ -42,7 +50,7 @@ export function OrderForm({
   onAddDentist,
 }: OrderFormProps) {
   const [formData, setFormData] = useState({
-    patientDni: order?.patient.dni.toString() || '',
+    patientDni: order?.patient.dni?.toString() || '',
     patientName: order?.patient.fullname || '',
     dentistName: order ? `${order.dentist.name} ${order.dentist.lastname}` : '',
     dispatchDate: order?.dispatchDate || new Date().toISOString().split('T')[0],
@@ -51,29 +59,23 @@ export function OrderForm({
     selectedServices: order?.services.map((s) => s.id) || [],
   });
 
+  const [patientSuggestions, setPatientSuggestions] = useState<Patient[]>([]);
+  const [showPatientSuggestions, setShowPatientSuggestions] = useState(false);
+  const [activePatientSuggestion, setActivePatientSuggestion] = useState(-1);
+  const dniInputRef = useRef<HTMLInputElement>(null);
   const [dentistSuggestions, setDentistSuggestions] = useState<Dentist[]>([]);
   const [showDentistSuggestions, setShowDentistSuggestions] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
-  const [existingPatient, setExistingPatient] = useState<Patient | null>(null);
-  const [isPatientNameDisabled, setIsPatientNameDisabled] = useState(false);
 
   useEffect(() => {
-    const dni = parseInt(formData.patientDni);
-    if (!isNaN(dni)) {
-      const foundPatient = patients.find((p) => p.dni === dni);
-      if (foundPatient) {
-        setExistingPatient(foundPatient);
-        setFormData((prev) => ({ ...prev, patientName: foundPatient.fullname }));
-        setIsPatientNameDisabled(true);
-      } else {
-        setExistingPatient(null);
-        setIsPatientNameDisabled(false);
-      }
+    if (formData.patientName.trim().length > 0) {
+      setPatientSuggestions(findPatientsByName(patients, formData.patientName));
+      setActivePatientSuggestion(-1);
     } else {
-      setExistingPatient(null);
-      setIsPatientNameDisabled(false);
+      setPatientSuggestions([]);
+      setActivePatientSuggestion(-1);
     }
-  }, [formData.patientDni, patients]);
+  }, [formData.patientName, patients]);
 
   useEffect(() => {
     if (formData.dentistName.length > 0) {
@@ -88,6 +90,36 @@ export function OrderForm({
       setActiveSuggestion(-1);
     }
   }, [formData.dentistName, dentists]);
+
+  const selectPatient = (patient: Patient) => {
+    setFormData((prev) => ({
+      ...prev,
+      patientName: patient.fullname,
+      patientDni: patient.dni?.toString() || '',
+    }));
+    setShowPatientSuggestions(false);
+    setActivePatientSuggestion(-1);
+  };
+
+  const handlePatientKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (patientSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActivePatientSuggestion((i) => (i + 1) % patientSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActivePatientSuggestion(
+        (i) => (i - 1 + patientSuggestions.length) % patientSuggestions.length,
+      );
+    } else if (e.key === 'Enter' && activePatientSuggestion >= 0) {
+      e.preventDefault();
+      selectPatient(patientSuggestions[activePatientSuggestion]);
+    } else if (e.key === 'Escape') {
+      setShowPatientSuggestions(false);
+      setActivePatientSuggestion(-1);
+    }
+  };
 
   const selectDentist = (dentist: Dentist) => {
     setFormData((prev) => ({
@@ -122,8 +154,7 @@ export function OrderForm({
     const selectedServices = services.filter((s) => formData.selectedServices.includes(s.id));
 
     if (
-      !formData.patientDni ||
-      !formData.patientName ||
+      !formData.patientName.trim() ||
       !formData.dentistName ||
       selectedServices.length === 0
     ) {
@@ -131,15 +162,19 @@ export function OrderForm({
       return;
     }
 
-    let patient: Patient;
-    if (existingPatient) {
-      patient = existingPatient;
-    } else {
-      patient = onAddPatient({
-        fullname: formData.patientName,
-        dni: parseInt(formData.patientDni),
-      });
+    const parsedDni = parseInt(formData.patientDni);
+    const dni = Number.isNaN(parsedDni) ? undefined : parsedDni;
+
+    if (dni != null) {
+      const owner = findPatientByDniOnly(patients, dni);
+      const exact = findPatientByDni(patients, formData.patientName.trim(), dni);
+      if (owner && !exact) {
+        toast.error(`El DNI ${dni} ya pertenece a ${owner.fullname}.`);
+        return;
+      }
     }
+
+    const patient = resolvePatient(patients, onAddPatient, formData.patientName.trim(), dni);
 
     let dentist: Dentist;
     const existingDentist = dentists.find(
@@ -179,6 +214,35 @@ export function OrderForm({
   const selectedServices = services.filter((s) => formData.selectedServices.includes(s.id));
   const totalPrice = sumServices(selectedServices);
 
+  const trimmedName = formData.patientName.trim();
+  const parsedDni = parseInt(formData.patientDni);
+  const effectiveDni = Number.isNaN(parsedDni) ? undefined : parsedDni;
+  const exactNameExists =
+    trimmedName.length > 0 && hasExactNamePatient(patients, trimmedName);
+
+  const exactMatch =
+    trimmedName.length > 0 && effectiveDni != null
+      ? findPatientByDni(patients, trimmedName, effectiveDni)
+      : undefined;
+  const dniOwner = effectiveDni != null ? findPatientByDniOnly(patients, effectiveDni) : undefined;
+  const dniConflict = dniOwner != null && !exactMatch;
+
+  let resolutionHint: string | null = null;
+  if (trimmedName.length > 0) {
+    if (exactMatch) {
+      resolutionHint = `Se vinculará a ${exactMatch.fullname} (DNI ${effectiveDni}).`;
+    } else if (dniConflict && dniOwner) {
+      resolutionHint = `El DNI ${effectiveDni} ya pertenece a ${dniOwner.fullname}.`;
+    } else if (effectiveDni != null) {
+      resolutionHint = `Se creará un nuevo paciente con DNI ${effectiveDni}.`;
+    } else {
+      const nameOnly = findNameOnlyPatient(patients, trimmedName);
+      resolutionHint = nameOnly
+        ? `Se vinculará a ${nameOnly.fullname} (sin DNI). Para un homónimo, ingresá su DNI.`
+        : 'Se creará un nuevo paciente sin DNI.';
+    }
+  }
+
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[560px]">
@@ -201,9 +265,111 @@ export function OrderForm({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="patientDni">DNI del Paciente *</Label>
+          <div className="relative space-y-1.5">
+            <Label htmlFor="patientName">Nombre del Paciente *</Label>
             <Input
+              id="patientName"
+              type="text"
+              role="combobox"
+              aria-expanded={showPatientSuggestions}
+              aria-controls="patient-suggestions"
+              aria-autocomplete="list"
+              aria-activedescendant={
+                activePatientSuggestion >= 0
+                  ? `patient-suggestion-${patientSuggestions[activePatientSuggestion]?.id}`
+                  : undefined
+              }
+              value={formData.patientName}
+              onChange={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  patientName: e.target.value,
+                }));
+                setShowPatientSuggestions(true);
+              }}
+              onKeyDown={handlePatientKeyDown}
+              onFocus={() => setShowPatientSuggestions(true)}
+              placeholder="Ingrese nombre completo"
+              required
+              autoComplete="off"
+            />
+            {showPatientSuggestions && patientSuggestions.length > 0 && (
+              <div
+                id="patient-suggestions"
+                role="listbox"
+                className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-[12px] border border-border bg-popover p-1.5 shadow-[0_2px_4px_oklch(22%_0.02_250/0.05),0_12px_28px_oklch(22%_0.02_250/0.09)]"
+              >
+                {patientSuggestions.map((patient, index) => (
+                  <div
+                    key={patient.id}
+                    id={`patient-suggestion-${patient.id}`}
+                    role="option"
+                    aria-selected={index === activePatientSuggestion}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-sm',
+                      index === activePatientSuggestion ? 'bg-muted' : 'hover:bg-muted',
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectPatient(patient);
+                    }}
+                    onMouseEnter={() => setActivePatientSuggestion(index)}
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-[9px] bg-muted text-[11px] font-bold text-muted-foreground">
+                      {patient.fullname
+                        .trim()
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join('')
+                        .toUpperCase()}
+                    </span>
+                    <span className="truncate font-medium">{patient.fullname}</span>
+                    <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+                      {patient.dni != null ? `DNI ${patient.dni}` : 'sin DNI'}
+                    </span>
+                  </div>
+                ))}
+                {trimmedName.length > 0 && (
+                  <div
+                    role="option"
+                    aria-selected={activePatientSuggestion === patientSuggestions.length}
+                    className={cn(
+                      'mt-1 flex cursor-pointer items-center gap-2.5 rounded-[9px] border-t border-border px-2.5 py-2 text-sm',
+                      activePatientSuggestion === patientSuggestions.length
+                        ? 'bg-muted'
+                        : 'hover:bg-muted',
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setShowPatientSuggestions(false);
+                      setActivePatientSuggestion(-1);
+                      if (exactNameExists) {
+                        dniInputRef.current?.focus();
+                      } else {
+                        setFormData((prev) => ({ ...prev, patientName: trimmedName }));
+                      }
+                    }}
+                    onMouseEnter={() => setActivePatientSuggestion(patientSuggestions.length)}
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-[9px] bg-accent text-accent-foreground">
+                      +
+                    </span>
+                    <span className="truncate font-medium">
+                      {exactNameExists
+                        ? 'Es otra persona: cargá su DNI para crearlo'
+                        : `Crear nuevo paciente "${trimmedName}"`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="patientDni">DNI del Paciente (opcional)</Label>
+            <Input
+              ref={dniInputRef}
               id="patientDni"
               type="number"
               value={formData.patientDni}
@@ -213,36 +379,31 @@ export function OrderForm({
                   patientDni: e.target.value,
                 }))
               }
-              placeholder="Ingrese DNI"
-              required
+              placeholder="Ej: 35123456"
             />
-            {existingPatient ? (
-              <p className="rounded-[10px] bg-[oklch(94%_0.05_155)] px-3 py-2 text-[12.5px] text-[oklch(32%_0.1_155)]">
-                Paciente encontrado: {existingPatient.fullname}
-              </p>
-            ) : formData.patientDni ? (
-              <p className="rounded-[10px] bg-[oklch(94%_0.03_240)] px-3 py-2 text-[12.5px] text-[oklch(36%_0.09_250)]">
-                DNI no encontrado. Se creará un nuevo paciente.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="patientName">Nombre del Paciente *</Label>
-            <Input
-              id="patientName"
-              type="text"
-              value={formData.patientName}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  patientName: e.target.value,
-                }))
-              }
-              placeholder="Ingrese nombre completo"
-              required
-              disabled={isPatientNameDisabled}
-            />
+            {resolutionHint && (
+              <div
+                className={cn(
+                  'flex items-center justify-between gap-2 rounded-[10px] px-3 py-2 text-[12.5px]',
+                  dniConflict
+                    ? 'bg-[oklch(95%_0.055_85)] text-[oklch(38%_0.09_70)]'
+                    : 'bg-muted text-muted-foreground',
+                )}
+              >
+                <span>{resolutionHint}</span>
+                {dniConflict && dniOwner && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 shrink-0 border-[oklch(80%_0.08_75)] text-[oklch(38%_0.09_70)] hover:bg-[oklch(91%_0.06_85)]"
+                    onClick={() => selectPatient(dniOwner)}
+                  >
+                    Vincular a {dniOwner.fullname}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="relative space-y-1.5">
